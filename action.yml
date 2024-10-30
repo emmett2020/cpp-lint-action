@@ -1,0 +1,245 @@
+name: 'cpp-lint-action'
+description: cpp-lint-action is a tool used to check C++ code quality in Github workflow.
+author: emmettzhang2020@outlook.com
+branding:
+  icon: "check-circle"
+  color: "red"
+inputs:
+  log-level:
+    description: |
+      Set the log verbose level of cpp-lint-action.
+      Supports: [trace, debug, info, error]
+    default: info
+  target-revision:
+    description: |
+      Set the target revision of git repository. It usually is the default branch
+      you want to be merged into. If you omit this option, cpp-lint-action will
+      automatically detect this.
+    type: string
+  enable-comment-on-issue:
+    description: Whether enable comment on Github issues
+    type: boolean
+    default: true
+  enable-pull-request-review:
+    description: Whether enable Github pull-request review comment
+    type: boolean
+    default: false
+  enable-step-summary:
+    description: Whether enable write step summary to Github action
+    type: boolean
+    default: true
+  enable-action-output:
+    description: Whether enable write output to Github action
+    type: boolean
+    default: true
+  disable-errors:
+    description: |
+      Whether disable errors. If errors are disabled, this action will not be failed.
+      You can use this action's output to customize later behavior.
+    type: boolean
+    default: false
+
+  enable-clang-format:
+    description: Enable clang-format check
+    type: boolean
+    default: true
+  enable-clang-format-fastly-exit:
+    description: |
+      Enabel clang-format fastly exit. This means
+      cpp-lint-action will stop clang-format as soon
+      as first file error occurs
+    type: boolean
+    default: false
+  clang-format-version:
+    description: |
+      Set the version of clang-format. Don't specify
+      both this option and the clang-format-binary option
+      to avoid ambigous. And the clang-format-${version} must
+      exist in your $PATH
+    type: string
+  clang-format-binary:
+    description: |
+      Set the full path of clang-format executable binary.
+      Don't spefify both this option and the clang-format-version
+      option to avoid ambigous
+    type: string
+  clang-format-file-iregex:
+    description: Set the source file filter for clang-format.
+    type: string
+
+  enable-clang-tidy:
+    description: Enable clang-tidy check
+    type: boolean
+    default: true
+  enable-clang-tidy-fastly-exit:
+    description: |
+      Enabel clang-tidy fastly exit. This means
+      cpp-lint-action will stop clang-tidy as soon
+      as first file error occurs
+    type: boolean
+    default: false
+  clang-tidy-version:
+    description: |
+      Set the version of clang-tidy. Don't specify
+      both this option and the clang-tidy-binary option
+      to avoid ambigous. And the clang-tidy-${version} must
+      exist in your $PATH
+    type: string
+  clang-tidy-binary:
+    description: |
+      Set the full path of clang-tidy executable binary.
+      Don't spefify both this option and the clang-tidy-version
+      option to avoid ambigous
+    type: string
+  clang-tidy-file-iregex:
+    description: Set the source file filter for clang-tidy.
+    type: string
+  clang-tidy-database:
+    description: Same as clang-tidy -p option
+    type: string
+  clang-tidy-allow-no-checks:
+    description: Enabel clang-tidy allow_no_check option
+    type: boolean
+    default: false
+  clang-tidy-enable-check-profile:
+    description: Enabel clang-tidy enable_check_profile option
+    type: boolean
+    default: false
+  clang-tidy-checks:
+    description: Same as clang-tidy checks option
+    type: string
+  clang-tidy-config:
+    description: Same as clang-tidy config option
+    type: string
+  clang-tidy-config-file:
+    description: Same as clang-tidy config-file option
+    type: string
+  clang-tidy-header-filter:
+    description: Same as clang-tidy header-filter option
+    type: string
+  clang-tidy-line-filter:
+    description: Same as clang-tidy line-filter option
+    type: string
+
+outputs:
+  clang-tidy-failed-number:
+    description: An integer of how many file fails on clang-tidy check
+    value: ${{ steps.on_linux.outputs.clang_tidy_failed_number }}
+  clang-format-failed-number:
+    description: An integer of how many file fails on clang-format check
+    value: ${{ steps.on_linux.outputs.clang_format_failed_number }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install dependencies on Linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        version_file="${GITHUB_ACTION_PATH}/VERSION"
+        release_version=$(cat ${version_file} | sed '/^$/d' | sed 's/[[:space:]]*$//')
+        release_version_str=$(echo ${release_version} | tr '.' '_')
+        echo "Current path: `pwd`, current version: ${release_version}"
+        wget -q "https://github.com/emmett2020/cpp-lint-action/releases/download/v${release_version}/cpp_lint_action_${release_version_str}_ubuntu_24_04_${{ runner.arch }}.tar.gz" \
+             -O cpp-lint-action.tar.gz
+        tar -xf cpp-lint-action.tar.gz
+        cd cpp_lint_action && ls -lrth && ./install.sh
+
+
+    - name: Run cpp-lint-action on Linux
+      id: on_linux
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        echo "::group::Adjust repository"
+        set -euo pipefail
+
+        if [[ "${{ env.DEBUG_CPP_LINT_ACTION }}" = "true"  ]]; then
+          # Debugging mode may not have remote repository.
+          echo "Enabled debugging mode"
+          default_branch="${{ inputs.target-revision }}"
+        else
+          repo_full_path="${{ env.GITHUB_WORKSPACE }}"
+          echo "Full path of testing repository: ${repo_full_path}"
+          pushd "${repo_full_path}"
+
+          current_branch=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch of testing repository: ${current_branch}"
+
+          default_branch=""
+          if [ -n "${{ inputs.target-revision }}" ]; then
+            default_branch="${{ inputs.target-revision }}"
+          else
+            git fetch origin
+            default_branch=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+          fi
+          echo "Default branch of testing repository: ${default_branch}"
+
+          if [ "${current_branch}" != "${default_branch}" ]; then
+            git fetch origin "${default_branch}":"${default_branch}"
+          fi
+
+          popd
+        fi
+
+        echo "::endgroup::"
+
+        options=" "
+        options="${options} --target-revision=${default_branch}"
+
+        if [ -n "${{ inputs.clang-format-version }}" ]; then
+          options="${options} --clang-format-version=${{ inputs.clang-format-version }}"
+        fi
+        if [ -n "${{ inputs.clang-format-binary }}" ]; then
+          options="${options} --clang-format-binary=${{ inputs.clang-format-binary }}"
+        fi
+        if [ -n "${{ inputs.clang-format-file-iregex }}" ]; then
+          options="${options} --clang-format-file-iregex=${{ inputs.clang-format-file-iregex }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-version }}" ]; then
+          options="${options} --clang-tidy-version=${{ inputs.clang-tidy-version }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-binary }}" ]; then
+          options="${options} --clang-tidy-binary=${{ inputs.clang-tidy-binary }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-file-iregex }}" ]; then
+          options="${options} --clang-tidy-file-iregex=${{ inputs.clang-tidy-file-iregex }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-database }}" ]; then
+          options="${options} --clang-tidy-database=${{ inputs.clang-tidy-database }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-checks }}" ]; then
+          options="${options} --clang-tidy-checks=${{ inputs.clang-tidy-checks }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-config }}" ]; then
+          options="${options} --clang-tidy-config=${{ inputs.clang-tidy-config }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-config-file }}" ]; then
+          options="${options} --clang-tidy-config-file=${{ inputs.clang-tidy-config-file }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-header-filter }}" ]; then
+          options="${options} --clang-tidy-header-filter=${{ inputs.clang-tidy-header-filter }}"
+        fi
+        if [ -n "${{ inputs.clang-tidy-line-filter }}" ]; then
+          options="${options} --clang-tidy-line-filter=${{ inputs.clang-tidy-line-filter }}"
+        fi
+
+        /usr/local/bin/cpp-lint-action                                                        \
+           --log-level="${{ inputs.log-level }}"                                              \
+           --enable-comment-on-issue="${{ inputs.enable-comment-on-issue }}"                  \
+           --enable-pull-request-review="${{ inputs.enable-pull-request-review }}"            \
+           --enable-step-summary="${{ inputs.enable-step-summary }}"                          \
+           --enable-action-output="${{ inputs.enable-action-output }}"                        \
+           --disable-errors="${{ inputs.disable-errors }}"                                    \
+           --enable-clang-format="${{ inputs.enable-clang-format }}"                          \
+           --enable-clang-format-fastly-exit="${{ inputs.enable-clang-format-fastly-exit }}"  \
+           --enable-clang-tidy="${{ inputs.enable-clang-tidy }}"                              \
+           --enable-clang-tidy-fastly-exit="${{ inputs.enable-clang-tidy-fastly-exit }}"      \
+           --clang-tidy-enable-check-profile="${{ inputs.clang-tidy-enable-check-profile }}"  \
+           --clang-tidy-allow-no-checks="${{ inputs.clang-tidy-allow-no-checks }}"            \
+           ${options}
+
+        exit $?
+
+

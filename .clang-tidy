@@ -1,0 +1,30 @@
+Checks: '
+  *,
+  -llvm*,
+  -fuchsia*,
+  -altera*,
+  -hicpp*,
+  -abseil*,
+  -cert*,
+
+  -modernize-use-trailing-return-type,
+
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-special-member-functions,
+
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-identifier-naming,
+
+  -google-readability-todo,
+
+  -misc-non-private-member-variables-in-classes,
+
+  -bugprone-easily-swappable-parameters,
+  -bugprone-suspicious-stringview-data-usage,
+'
+WarningsAsErrors: '*'
+

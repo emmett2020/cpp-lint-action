@@ -1,0 +1,57 @@
+name: Code Coverage On Ubuntu 24.04
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/**'
+
+jobs:
+  code-coverage:
+    name: "code-coverage-on-ubuntu-24.04"
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Setup C/C++ Compiler
+      run: |
+        echo "CC=gcc-13" >> ${GITHUB_ENV}
+        echo "CXX=g++-13" >> ${GITHUB_ENV}
+
+    - name: Install Compilation Dependencies
+      run: |
+        sudo apt install -y ninja-build
+        sudo apt install -y libboost-all-dev
+        sudo apt install -y libgit2-dev
+        sudo apt install -y gcovr
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    - name: CMake
+      run: |
+        set -euo pipefail
+        cmake -S . -B build -GNinja  \
+          -DCMAKE_BUILD_TYPE="Debug" \
+          -DENABLE_CODE_COVERAGE=ON
+
+    - name: Compile
+      run: cmake --build build -v -j8
+
+    - name: Run Unit Tests
+      run: |
+        ./build/tests/test
+
+    - name: Collection Result
+      run: |
+        set -euo pipefail
+        gcov -v
+        gcovr --version
+        gcovr -v .
+
+    # INFO: you must have already created CODECOV_TOKEN referenced by on codecov specification.
+    - name: Upload Coverage Report to codecov.io
+      uses: codecov/codecov-action@v4
+      with:
+        file: build/coverage.html
+        token: ${{ secrets.CODECOV_TOKEN }} # required
+        verbose: true

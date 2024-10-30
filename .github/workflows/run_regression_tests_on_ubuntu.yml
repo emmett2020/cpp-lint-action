@@ -1,0 +1,87 @@
+name: Run Regression Tests On Ubuntu
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        required: true
+        type: string
+
+jobs:
+  test-different-clang-tool-versions:
+    name: "${{ matrix.platform }}-clang-tool-version-${{ matrix.clang_tool_version }}"
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { platform: "Ubuntu-24.04", clang_tool_version: "18" }
+          - { platform: "Ubuntu-24.04", clang_tool_version: "17" }
+          - { platform: "Ubuntu-24.04", clang_tool_version: "16" }
+          - { platform: "Ubuntu-22.04", clang_tool_version: "15" }
+          - { platform: "Ubuntu-22.04", clang_tool_version: "14" }
+          - { platform: "Ubuntu-22.04", clang_tool_version: "13" }
+          - { platform: "Ubuntu-20.04", clang_tool_version: "12" }
+          - { platform: "Ubuntu-20.04", clang_tool_version: "11" }
+          - { platform: "Ubuntu-20.04", clang_tool_version: "10" }
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+ 
+      - name: Make Test Repository
+        run: |
+          bash ./.github/workflows/basic_test.sh
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.artifact-name }}"
+          path: "art_temp/"
+
+      - name: Install Artifacts
+        run: |
+          set -euo pipefail
+          pkg_name="cpp_lint_action"
+
+          tar -xf "art_temp/${{ inputs.artifact-name }}"
+          cd ${pkg_name}
+          ls -lrth && ./install.sh
+
+      - name: Use cpp-lint-action to Check Test Repository
+        id: cpp-lint-action
+        run: |
+          set -euo pipefail
+          pushd "${{ env.DEBUG_GITHUB_WORKSPACE }}"
+
+          clang_format_binary="/usr/bin/clang-format-${{ matrix.clang_tool_version }}"
+          clang_tidy_binary="/usr/bin/clang-tidy-${{ matrix.clang_tool_version }}"
+
+          echo "::group::cpp-lint-action log"
+          /usr/local/bin/cpp-lint-action                              \
+            --log-level=trace                                         \
+            --target-revision=master                                  \
+            --enable-comment-on-issue=false                           \
+            --enable-pull-request-review=false                        \
+            --enable-step-summary=false                               \
+            --enable-action-output=true                               \
+            --disable-errors=true                                     \
+            --enable-clang-format=true                                \
+            --enable-clang-format-fastly-exit=false                   \
+            --clang-format-binary=${clang_format_binary}              \
+            --enable-clang-tidy=true                                  \
+            --enable-clang-tidy-fastly-exit=false                     \
+            --clang-tidy-binary=${clang_tidy_binary}                  \
+            --clang-tidy-enable-check-profile=false                   \
+            --clang-tidy-allow-no-checks=false
+          echo "::endgroup::"
+
+          popd
+
+      - name: Validate Result
+        run: |
+          set -euo pipefail
+          format_failed="${{ steps.cpp-lint-action.outputs.clang_format_failed_number }}"
+          tidy_failed="${{ steps.cpp-lint-action.outputs.clang_tidy_failed_number }}"
+          [[ "${format_failed}" -ne 1 ]] && exit 1
+          [[ "${tidy_failed}" -ne 1 ]]   && exit 1
+          exit 0
+

@@ -1,0 +1,24 @@
+# https://cpp-linter.github.io/cpp-linter-action/
+name: Source Code Static Analysis
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Compile Your Program
+      run: |
+        mkdir build && cd build
+        cmake ..
+        make -j`nproc`
+
+    - uses: emmett2020/cpp-linter@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
