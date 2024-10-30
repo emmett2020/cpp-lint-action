@@ -1,0 +1,4 @@
+.cache
+build
+src/configs/*.h
+debug_env.sh

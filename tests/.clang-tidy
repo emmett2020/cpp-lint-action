@@ -1,0 +1,37 @@
+Checks: '
+  *,
+  -llvm*,
+  -fuchsia*,
+  -altera*,
+  -hicpp*,
+  -abseil*,
+  -cert*,
+
+  -modernize-use-trailing-return-type,
+
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+
+  -modernize-avoid-c-arrays,
+
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-identifier-naming,
+  -readability-function-cognitive-complexity,
+
+  -google-readability-todo,
+  -google-build-using-namespace,
+
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+
+  -bugprone-easily-swappable-parameters,
+'
+WarningsAsErrors: '*'
+

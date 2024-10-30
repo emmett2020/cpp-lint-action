@@ -1,0 +1,40 @@
+name: Release Artifacts
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        required: true
+        type: string
+      distribution-name:
+        required: true
+        type: string
+      release-version:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  release:
+    name: Release cpp-lint-action
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Validated Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "${{ inputs.artifact-name }}"
+
+      - name: Rename Artifacts
+        run: |
+          set -euo pipefail
+          mv "${{ inputs.artifact-name }}" "${{ inputs.distribution-name }}"
+
+      - name: Release Artifacts to Github Release Page
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          tag_name: v${{ inputs.release-version }}
+          files: |
+            ${{ inputs.distribution-name }}

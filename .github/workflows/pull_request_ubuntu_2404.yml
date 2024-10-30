@@ -1,0 +1,151 @@
+name: Pull Request On Ubuntu 24.04
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main]
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  build-unit-tests-package:
+    name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}"
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.artifact_name }}
+      distribution_name: ${{ steps.artifact.outputs.distribution_name }}
+      release_version: ${{ steps.artifact.outputs.release_version }}
+      need_test_code_coverage: ${{ steps.filter.outputs.need_test_code_coverage }}
+      need_regression_tests: ${{ steps.filter.outputs.need_regression_tests }}
+      need_release_artifacts: ${{ steps.filter.outputs.need_release_artifacts }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Details: https://github.com/actions/runner-images
+          - { compiler: "gcc",   version: "12.3.0", build_type: Release, cxxflags: "" }
+          - { compiler: "gcc",   version: "13.3.0", build_type: Release, cxxflags: "" }
+          - { compiler: "gcc",   version: "14.2.0", build_type: Release, cxxflags: "" }
+          - { compiler: "clang", version: "16.1.6", build_type: Release, cxxflags: "" }
+          - { compiler: "clang", version: "18.1.3", build_type: Release, cxxflags: "" }
+
+    steps:
+      - name: Setup C/C++ Compiler
+        run: |
+          set -euo pipefail
+          major=$(echo ${{ matrix.version }} | cut -d'.' -f1)
+          if [[ "${{ matrix.compiler }}" == "clang" ]]; then
+            echo "CC=clang-${major}" >> ${GITHUB_ENV}
+            echo "CXX=clang++-${major}" >> ${GITHUB_ENV}
+          else
+            echo "CC=gcc-${major}" >> ${GITHUB_ENV}
+            echo "CXX=g++-${major}" >> ${GITHUB_ENV}
+          fi
+
+      - name: Install Compilation Dependencies
+        run: |
+          sudo apt install -y ninja-build      \
+                              libboost-all-dev \
+                              libgit2-dev
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: CMake
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -GNinja                     \
+            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"    \
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
+
+      - name: Compile
+        run: |
+          cmake --build build -v -j8
+
+      - name: Run Unit Tests
+        run: |
+          ./build/tests/test
+
+      - name: Prepare Artifacts
+        id: artifact
+        run: |
+          set -euo pipefail
+
+          # Check version string.
+          release_version=$(cat VERSION | sed '/^$/d' | sed 's/[[:space:]]*$//')
+          if [[ ! "${release_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "VERSION: ${release_version} has a unrecognized format."
+            exit 1
+          fi
+          echo "release_version=${release_version}" >> ${GITHUB_OUTPUT}
+
+          # Get artifact_name and distribution_name by package_name.
+          # The artifact_name and distribution_name has more informations.
+          package_name="cpp_lint_action"
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-8)
+          release_version_str=$(echo ${release_version} | tr '.' '_')
+          artifact_name="${package_name}_${release_version_str}_ubuntu_24_04_${{ runner.arch }}_${sha_short}"
+          echo "artifact_name=${artifact_name}" >> ${GITHUB_OUTPUT}
+
+          distribution_name="${package_name}_${release_version_str}_ubuntu_24_04_${{ runner.arch }}"
+          echo "distribution_name=${distribution_name}" >> ${GITHUB_OUTPUT}
+
+          echo "::group::Install packaging dependencies"
+          bash scripts/linux/ubuntu/install_lddtree.sh
+          bash scripts/linux/ubuntu/install_patchelf.sh
+          echo "::endgroup::"
+
+          # package
+          bash scripts/linux/ubuntu/x64/manual_distribution/with_compiler/package.sh
+
+          # rename
+          mv build/${package_name}.tar.gz build/${artifact_name}.tar.gz
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.compiler == 'gcc' && matrix.version == '14.2.0'
+        with:
+          name: "${{ steps.artifact.outputs.artifact_name }}.tar.gz"
+          path: build/${{ steps.artifact.outputs.artifact_name }}.tar.gz
+          if-no-files-found: error
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            need_test_code_coverage:
+              - 'VERSION'
+              - 'src/**'
+            need_regression_tests:
+              - 'VERSION'
+              - 'cmake/**'
+              - 'scripts/**'
+              - '.github/**'
+            need_release_artifacts:
+              - 'VERSION'
+
+  test-code-coverage:
+    needs: [build-unit-tests-package]
+    if: ${{ needs.build-unit-tests-package.outputs.need_test_code_coverage == 'true' }}
+    uses: ./.github/workflows/test_code_coverage.yml
+
+  run-regression-tests:
+    needs: [build-unit-tests-package]
+    if: ${{ needs.build-unit-tests-package.outputs.need_regression_tests == 'true' }}
+    uses: ./.github/workflows/regression_tests_on_ubuntu.yml
+    with:
+      artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
+
+  release-artifacts-to-github:
+    needs: [build-unit-tests-package, test-code-coverage, run-regression-tests]
+    if: ${{ needs.build-unit-tests-package.outputs.need_release_artifacts == 'true' }}
+    uses: ./.github/workflows/release_artifacts.yml
+    with:
+      artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
+      distribution-name: "${{ needs.build-unit-tests-package.outputs.distribution_name }}.tar.gz"
+      release-version: "${{ needs.build-unit-tests-package.outputs.release_version }}"
+
