@@ -1,8 +1,5 @@
 name: 'cpp-lint-action'
-description: |
-  cpp-lint-action is a tool used to check C++ code quality and do quality
-  guarding on Github workflow. It relies on mainstream static code analysis
-  tools, supports multiple platforms, and offers various result report formats.
+description: cpp-lint-action is a tool used to check C++ code quality in Github workflow.
 author: emmettzhang2020@outlook.com
 branding:
   icon: "check-circle"
