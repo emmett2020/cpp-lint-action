@@ -36,5 +36,6 @@ jobs:
         with:
           fail_on_unmatched_files: true
           tag_name: v${{ inputs.release-version }}
+          target_commitish: ${{ github.event.pull_request.head.sha }}
           files: |
             ${{ inputs.distribution-name }}
