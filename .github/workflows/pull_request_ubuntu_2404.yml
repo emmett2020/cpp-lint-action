@@ -1,7 +1,7 @@
 name: Pull Request On Ubuntu 24.04
 on:
   pull_request:
-    branches: [master, main]
+    branches: [master]
 
 permissions:
   contents: write
@@ -131,19 +131,4 @@ jobs:
     if: ${{ needs.build-unit-tests-package.outputs.need_test_code_coverage == 'true' }}
     uses: ./.github/workflows/test_code_coverage.yml
 
-  run-regression-tests:
-    needs: [build-unit-tests-package]
-    if: ${{ needs.build-unit-tests-package.outputs.need_regression_tests == 'true' }}
-    uses: ./.github/workflows/regression_tests_on_ubuntu.yml
-    with:
-      artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
-
-  release-artifacts-to-github:
-    needs: [build-unit-tests-package, test-code-coverage, run-regression-tests]
-    if: ${{ needs.build-unit-tests-package.outputs.need_release_artifacts == 'true' }}
-    uses: ./.github/workflows/release_artifacts.yml
-    with:
-      artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
-      distribution-name: "${{ needs.build-unit-tests-package.outputs.distribution_name }}.tar.gz"
-      release-version: "${{ needs.build-unit-tests-package.outputs.release_version }}"
 

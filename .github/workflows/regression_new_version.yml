@@ -1,0 +1,92 @@
+name: Release New Version On Ubuntu
+on:
+  tag: v*
+
+jobs:
+  build-unit-tests-package:
+    name: "Ubuntu-24.04-build-unit-tests-package"
+    runs-on: ubuntu-24.04
+    artifact_name: ${{ steps.artifact.outputs.artifact_name }}
+    distribution_name: ${{ steps.artifact.outputs.distribution_name }}
+    release_version: ${{ steps.artifact.outputs.release_version }}
+    steps:
+      - name: Setup C/C++ Compiler
+        run: |
+          set -euo pipefail
+          echo "CC=gcc-14" >> ${GITHUB_ENV}
+          echo "CXX=g++-14" >> ${GITHUB_ENV}
+
+      - name: Install Compilation Dependencies
+        run: |
+          set -euo pipefail
+          sudo apt install -y ninja-build      \
+                              libboost-all-dev \
+                              libgit2-dev
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: CMake
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE="Release"
+
+      - name: Compile
+        run: |
+          cmake --build build -v -j8
+
+      - name: Run Unit Tests
+        run: |
+          ./build/tests/test
+
+      - name: Prepare Artifacts
+        id: artifact
+        run: |
+          set -euo pipefail
+
+          # Check version string.
+          release_version=$(cat VERSION | sed '/^$/d' | sed 's/[[:space:]]*$//')
+          if [[ ! "${release_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "VERSION: ${release_version} has a unrecognized format."
+            exit 1
+          fi
+          echo "release_version=${release_version}" >> ${GITHUB_OUTPUT}
+
+          # Get artifact_name and distribution_name by package_name.
+          # The artifact_name and distribution_name has more informations.
+          package_name="cpp_lint_action"
+          sha_short=$(echo "${{ github.sha }}" | cut -c1-8)
+          release_version_str=$(echo ${release_version} | tr '.' '_')
+          artifact_name="${package_name}_${release_version_str}_ubuntu_24_04_${{ runner.arch }}_${sha_short}"
+          echo "artifact_name=${artifact_name}" >> ${GITHUB_OUTPUT}
+
+          distribution_name="${package_name}_${release_version_str}_ubuntu_24_04_${{ runner.arch }}"
+          echo "distribution_name=${distribution_name}" >> ${GITHUB_OUTPUT}
+
+          echo "::group::Install packaging dependencies"
+          bash scripts/linux/ubuntu/install_lddtree.sh
+          bash scripts/linux/ubuntu/install_patchelf.sh
+          echo "::endgroup::"
+
+          # package
+          bash scripts/linux/ubuntu/x64/manual_distribution/with_compiler/package.sh
+
+          # rename
+          mv build/${package_name}.tar.gz build/${artifact_name}.tar.gz
+
+  run-regression-tests:
+    needs: [build-unit-tests-package]
+    if: ${{ needs.build-unit-tests-package.outputs.need_regression_tests == 'true' }}
+    uses: ./.github/workflows/regression_tests_on_ubuntu.yml
+    with:
+      artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
+
+  release-artifacts-to-github:
+    needs: [build-unit-tests-package, run-regression-tests]
+    if: ${{ needs.build-unit-tests-package.outputs.need_release_artifacts == 'true' }}
+    uses: ./.github/workflows/release_artifacts.yml
+    with:
+      artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
+      distribution-name: "${{ needs.build-unit-tests-package.outputs.distribution_name }}.tar.gz"
+      release-version: "${{ needs.build-unit-tests-package.outputs.release_version }}"
+
