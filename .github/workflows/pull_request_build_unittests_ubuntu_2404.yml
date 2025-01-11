@@ -3,8 +3,6 @@ on:
   pull_request:
     branches: [master]
 
-env:
-
 jobs:
   build-unit-tests:
     name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}"
