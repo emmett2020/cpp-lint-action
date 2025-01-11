@@ -1,14 +1,28 @@
-name: Release New Version On Ubuntu
+name: Manually Release New Version On Ubuntu24.04
+
 on:
-  tag: v*
+  workflow_dispatch:
+    inputs:
+      whether_release_to_github:
+        description: wheter upload real products to Github Release page
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  discussions: write
 
 jobs:
   build-unit-tests-package:
-    name: "Ubuntu-24.04-build-unit-tests-package"
+    name: "ubuntu-24.04-build-unit-tests-package"
     runs-on: ubuntu-24.04
-    artifact_name: ${{ steps.artifact.outputs.artifact_name }}
-    distribution_name: ${{ steps.artifact.outputs.distribution_name }}
-    release_version: ${{ steps.artifact.outputs.release_version }}
+
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.artifact_name }}
+      distribution_name: ${{ steps.artifact.outputs.distribution_name }}
+      release_version: ${{ steps.artifact.outputs.release_version }}
+
     steps:
       - name: Setup C/C++ Compiler
         run: |
@@ -27,17 +41,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: CMake
-        run: |
-          set -euo pipefail
-          cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE="Release"
+        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE="Release"
 
       - name: Compile
-        run: |
-          cmake --build build -v -j8
+        run: cmake --build build -v -j8
 
       - name: Run Unit Tests
-        run: |
-          ./build/tests/test
+        run:  ./build/tests/test
 
       - name: Prepare Artifacts
         id: artifact
@@ -52,11 +62,10 @@ jobs:
           fi
           echo "release_version=${release_version}" >> ${GITHUB_OUTPUT}
 
-          # Get artifact_name and distribution_name by package_name.
-          # The artifact_name and distribution_name has more informations.
           package_name="cpp_lint_action"
+          release_version_str=$(echo ${release_version} | tr '.' '_' | tr '-' '_')
           sha_short=$(echo "${{ github.sha }}" | cut -c1-8)
-          release_version_str=$(echo ${release_version} | tr '.' '_')
+
           artifact_name="${package_name}_${release_version_str}_ubuntu_24_04_${{ runner.arch }}_${sha_short}"
           echo "artifact_name=${artifact_name}" >> ${GITHUB_OUTPUT}
 
@@ -74,17 +83,23 @@ jobs:
           # rename
           mv build/${package_name}.tar.gz build/${artifact_name}.tar.gz
 
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.artifact.outputs.artifact_name }}.tar.gz"
+          path: build/${{ steps.artifact.outputs.artifact_name }}.tar.gz
+          if-no-files-found: error
+
   run-regression-tests:
     needs: [build-unit-tests-package]
-    if: ${{ needs.build-unit-tests-package.outputs.need_regression_tests == 'true' }}
-    uses: ./.github/workflows/regression_tests_on_ubuntu.yml
+    uses: ./.github/workflows/run_regression_tests_on_ubuntu.yml
     with:
       artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
 
   release-artifacts-to-github:
     needs: [build-unit-tests-package, run-regression-tests]
-    if: ${{ needs.build-unit-tests-package.outputs.need_release_artifacts == 'true' }}
     uses: ./.github/workflows/release_artifacts.yml
+    if: "${{ inputs.whether_release_to_github == true }}"
     with:
       artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
       distribution-name: "${{ needs.build-unit-tests-package.outputs.distribution_name }}.tar.gz"

@@ -1,10 +1,13 @@
 name: Code Coverage On Ubuntu 24.04
 on:
-  workflow_call:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/**'
 
 jobs:
   code-coverage:
-    name: "Code Coverage On Ubuntu 24.04"
+    name: "code-coverage-on-ubuntu-24.04"
     runs-on: ubuntu-24.04
     steps:
     - name: Setup C/C++ Compiler
@@ -45,7 +48,7 @@ jobs:
         gcovr --version
         gcovr -v .
 
-    # NOTE: you must have already created CODECOV_TOKEN referenced by on codecov specification.
+    # INFO: you must have already created CODECOV_TOKEN referenced by on codecov specification.
     - name: Upload Coverage Report to codecov.io
       uses: codecov/codecov-action@v4
       with:
