@@ -1,0 +1,56 @@
+name: Build and Run Unit Tests on Ubuntu 24.04
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-unit-tests:
+    name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Details: https://github.com/actions/runner-images
+          - { compiler: "gcc",   version: "12.3.0", build_type: Release, cxxflags: "" }
+          - { compiler: "gcc",   version: "13.3.0", build_type: Release, cxxflags: "" }
+          - { compiler: "gcc",   version: "14.2.0", build_type: Release, cxxflags: "" }
+          - { compiler: "clang", version: "16.1.6", build_type: Release, cxxflags: "" }
+          - { compiler: "clang", version: "18.1.3", build_type: Release, cxxflags: "" }
+
+    steps:
+      - name: Setup C/C++ Compiler
+        run: |
+          set -euo pipefail
+          major=$(echo ${{ matrix.version }} | cut -d'.' -f1)
+          if [[ "${{ matrix.compiler }}" == "clang" ]]; then
+            echo "CC=clang-${major}" >> ${GITHUB_ENV}
+            echo "CXX=clang++-${major}" >> ${GITHUB_ENV}
+          else
+            echo "CC=gcc-${major}" >> ${GITHUB_ENV}
+            echo "CXX=g++-${major}" >> ${GITHUB_ENV}
+          fi
+
+      - name: Install Compilation Dependencies
+        run: |
+          sudo apt install -y ninja-build      \
+                              libboost-all-dev \
+                              libgit2-dev
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: CMake
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -GNinja                     \
+            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"    \
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
+
+      - name: Compile
+        run: cmake --build build -v -j8
+
+      - name: Run Unit Tests
+        run: ./build/tests/test

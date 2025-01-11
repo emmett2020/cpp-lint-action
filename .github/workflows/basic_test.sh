@@ -3,9 +3,6 @@ set -euo pipefail
 
 # 1. Create a temporary git repository
 TEMP_REPO=$(mktemp -d)
-# TEMP_REPO="${HOME}/temp/ci/test_git/"
-# [[ -d "${TEMP_REPO}" ]] && rm -rf ${TEMP_REPO}
-# mkdir -p "${TEMP_REPO}"
 
 pushd "${TEMP_REPO}" &> /dev/null
 git config --global init.defaultBranch master
