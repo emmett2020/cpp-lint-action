@@ -1,5 +1,5 @@
 # cpp-lint-action
-![Ubuntu CI](https://github.com/emmett2020/cpp-lint-action/actions/workflows/pull_request_ubuntu_2404.yml/badge.svg)
+![Ubuntu CI](https://github.com/emmett2020/cpp-lint-action/actions/workflows/pull_request_build_unittests_ubuntu_2404.yml/badge.svg)
 ![Apache](https://img.shields.io/github/license/emmett2020/cpp-lint-action)
 [![codecov](https://codecov.io/gh/emmett2020/cpp-lint-action/graph/badge.svg?token=BO88mIYJ49)](https://codecov.io/gh/emmett2020/cpp-lint-action)
 ![release](https://img.shields.io/github/release/emmett2020/cpp-lint-action)

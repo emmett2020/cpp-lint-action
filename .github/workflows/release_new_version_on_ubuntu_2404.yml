@@ -39,6 +39,8 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: CMake
         run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE="Release"
@@ -61,6 +63,13 @@ jobs:
             exit 1
           fi
           echo "release_version=${release_version}" >> ${GITHUB_OUTPUT}
+
+          # We will use release_version as tag name. If it already exists, just
+          # exit this program with error.
+          if git rev-parse "v${release_version}" >/dev/null 2>&1; then
+            echo "Tag v${release_version} exists."
+            exit 1
+          fi
 
           package_name="cpp_lint_action"
           release_version_str=$(echo ${release_version} | tr '.' '_' | tr '-' '_')
