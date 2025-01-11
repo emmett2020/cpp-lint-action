@@ -3,6 +3,8 @@ on:
   pull_request:
     branches: [master]
 
+env:
+
 jobs:
   build-unit-tests:
     name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}"
@@ -19,7 +21,14 @@ jobs:
           - { compiler: "clang", version: "18.1.3", build_type: Release, cxxflags: "" }
 
     steps:
-      - name: Setup C/C++ Compiler
+      - name: Install Compilation Dependencies
+        run: |
+          sudo apt install -y ninja-build      \
+                              libboost-all-dev \
+                              libgit2-dev      \
+                              ccache
+
+      - name: Setup C/C++ Compiler and ccache
         run: |
           set -euo pipefail
           major=$(echo ${{ matrix.version }} | cut -d'.' -f1)
@@ -31,26 +40,47 @@ jobs:
             echo "CXX=g++-${major}" >> ${GITHUB_ENV}
           fi
 
-      - name: Install Compilation Dependencies
-        run: |
-          sudo apt install -y ninja-build      \
-                              libboost-all-dev \
-                              libgit2-dev
+          echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
+          # echo "PATH=/usr/lib/ccache:$PATH" >> ${GITHUB_ENV}
+          ccache --version
+          ccache --set-config=max_size=500M
+
 
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           submodules: true
 
+      - name: Get Time Stamp
+        id: timestamp
+        run: |
+          timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+          echo "Current timestamp: $timestamp"
+          echo "timestamp=${timestamp}" >> ${GITHUB_OUTPUT}
+
+      - name: Restore ccache
+        id: ccache-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-${{ steps.timestamp.outputs.timestamp }}
+          restore-keys: |
+            ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-
+
       - name: CMake
         run: |
           set -euo pipefail
+          echo "Cache hit: ${{ steps.ccache-cache.outputs.cache-hit }}"
           cmake -S . -B build -GNinja                     \
             -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"    \
-            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache            \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Compile
-        run: cmake --build build -v -j8
+        run: |
+          cmake --build build -v -j8
+          ccache -s
 
       - name: Run Unit Tests
         run: ./build/tests/test
