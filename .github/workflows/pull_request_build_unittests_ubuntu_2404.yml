@@ -125,13 +125,13 @@ jobs:
       - name: CMake
         run: |
           set -euo pipefail
-          cmake -S . -B build -GNinja                     \
-            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"    \
-            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache            \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache          \
-            -DFETCHCONTENT_QUIET=off                      \
-            -DBoost_dir=~/.linuxbrew/Cellar/boost/1.87.0
+          cmake -S . -B build -GNinja                                   \
+            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"                  \
+            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"               \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache                          \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache                        \
+            -DFETCHCONTENT_QUIET=off                                    \
+            -DBoost_dir=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
 
       - name: Compile
         run: |
