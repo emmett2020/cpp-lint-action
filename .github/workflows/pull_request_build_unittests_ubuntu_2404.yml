@@ -31,7 +31,7 @@ jobs:
           echo "timestamp=${timestamp}" >> ${GITHUB_OUTPUT}
 
       - name: Cache and Restore Compiling Tools
-        id: cache-compiling-tools
+        id: compiling-tools-cache
         uses: actions/cache@v4
         with:
           path: ${COMPILING_TOOLS_DIR}
@@ -71,20 +71,18 @@ jobs:
         with:
           path: ~/.ccache
           key: ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.time.outputs.timestamp }}
-          restore-keys: |
-            ccache-${{ matrix.compiler }}-${{ matrix.version }}-
+          restore-keys: ccache-${{ matrix.compiler }}-${{ matrix.version }}-
 
       - name: Create Build Directory
         run: mkdir -p build
 
       - name: Cache and Restore CMake FetchContent
-        id: cmake-fetchcontent-cache
+        id: fetchcontent-cache
         uses: actions/cache@v4
         with:
           path: build/_deps/
-          key: cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.time.outputs.timestamp }}
-          restore-keys: |
-            cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-
+          key: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.time.outputs.timestamp }}
+          restore-keys: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-
 
       - name: Compile
         run: |
