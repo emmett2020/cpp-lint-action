@@ -72,10 +72,10 @@ jobs:
         id: cmake-fetchcontent-cache
         uses: actions/cache@v4
         with:
-          path: build/_deps/*-src/
-          key: cmake-fetchcontent-${{ runner.os }}-${{ steps.timestamp.outputs.timestamp }}
+          path: build/_deps/
+          key: cmake-fetchcontent-${{ runner.os }}
           restore-keys: |
-            cmake-fetchcontent-${{ runner.os }}-
+            cmake-fetchcontent-${{ runner.os }}
 
 
       - name: DEBUG
