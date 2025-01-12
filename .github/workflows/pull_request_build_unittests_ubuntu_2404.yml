@@ -80,7 +80,7 @@ jobs:
 
       - name: DEBUG
         run: |
-          ls -lrth build/
+          ls -lrthR build/
 
       - name: CMake
         run: |
