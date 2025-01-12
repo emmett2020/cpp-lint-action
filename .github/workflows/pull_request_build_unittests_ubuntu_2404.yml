@@ -51,20 +51,14 @@ jobs:
           ls -lrthR ~/.tools
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
-      - name: Set Compilation Dependent Tools Path
-        run: |
-          # The new path will take effect in subsequence steps.
-          echo "${HOME}/.tools" >> ${GITHUB_PATH}
+      - name: Set Building Tools Path
+        run: echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
       - name: Install Compilation Dependent Libraries
         run: |
           set -euo pipefail
-          # sudo apt install -y libboost-all-dev \
-          #                     libgit2-dev
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          brew install boost
-          sudo apt install -y libgit2-dev
-          # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
+          sudo apt install -y libboost-all-dev \
+                              libgit2-dev
 
 
       - name: Setup C/C++ Compiler and ccache
@@ -126,15 +120,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          boost_dir=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0/lib/cmake/Boost-1.87.0
-
           cmake -S . -B build -GNinja                                   \
             -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"                  \
             -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"               \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache                          \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache                        \
-            -DFETCHCONTENT_QUIET=off                                    \
-            -DBoost_DIR=${boost_dir}
+            -DFETCHCONTENT_QUIET=off
 
       - name: Compile
         run: |
