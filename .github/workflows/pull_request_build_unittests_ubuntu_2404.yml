@@ -55,12 +55,21 @@ jobs:
       - name: Set Building Tools Path
         run: echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
+      - name: Cache and Restore Building Libraries
+        id: cache-apt
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives/
+          key: cache-apt-${{ runner.os }}
+          restore-keys: |
+            cache-apt-${{ runner.os }}
+
       - name: Install Building Libraries
         run: |
           /bin/bash -c "$(curl -sL https://git.io/vokNn)"
           sudo apt-fast install -y libboost-all-dev libgit2-dev
 
-          ls -lrthR /var/cache/apt/archives
+          sudo ls -lrthR /var/cache/apt/archives
 
       - name: Setup C/C++ Compiler and ccache
         run: |
