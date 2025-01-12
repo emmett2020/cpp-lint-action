@@ -64,7 +64,8 @@ jobs:
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install boost
           brew install libgit2
-          ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
+          # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
+          ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/libgit2
 
 
       - name: Setup C/C++ Compiler and ccache
