@@ -1,5 +1,4 @@
 # Dependencies:  None
-
 include(FetchContent)
 FetchContent_Declare(
   Catch2
