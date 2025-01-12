@@ -43,6 +43,7 @@ configure_file(${config_dir}/version.h.in ${config_dir}/version.h)
 
 include_directories(${Boost_INCLUDE_DIRS}
                     ${magic_enum_SOURCE_DIR}/include
+                    ${libgit2_INCLUDE_DIRS}
                     ${src_dir})
 
 link_libraries(${Boost_LIBRARIES}
