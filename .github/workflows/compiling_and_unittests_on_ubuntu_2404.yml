@@ -6,7 +6,7 @@ on:
 env:
   NINJA_VERSION: 1.12.1
   CCACHE_VERSION: 4.10.2
-  COMPILING_TOOLS_DIR: "~/.tools"
+  COMPILING_TOOLS_DIR: "${{ github.workspace }}/.tools"
 
 jobs:
   build-unit-tests:
