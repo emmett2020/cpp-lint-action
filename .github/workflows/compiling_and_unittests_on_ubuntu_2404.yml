@@ -3,10 +3,6 @@ on:
   pull_request:
     branches: [master]
 
-env:
-  NINJA_VERSION: 1.12.0
-  CCACHE_VERSION: 4.10.2
-
 jobs:
   build-unit-tests:
     name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}"
