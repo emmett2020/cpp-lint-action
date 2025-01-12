@@ -67,6 +67,7 @@ jobs:
       - name: Compile
         run: |
           set -euo pipefail
+          export CCACHE_DIR="${HOME}/.ccache"
           cmake -S . -B build -GNinja              \
             -DCMAKE_BUILD_TYPE=Release             \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
