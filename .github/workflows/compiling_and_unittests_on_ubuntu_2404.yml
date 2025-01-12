@@ -53,8 +53,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ccache
-          key: ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.time.outputs.timestamp }}
-          restore-keys: ccache-${{ matrix.compiler }}-${{ matrix.version }}-
+          key: ccache-${{ matrix.compiler }}-${{ matrix.version }}
+          restore-keys: ccache-${{ matrix.compiler }}-${{ matrix.version }}
 
       - name: Cache and Restore CMake FetchContent
         id: fetchcontent-cache
