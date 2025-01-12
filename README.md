@@ -27,7 +27,7 @@ Just add follow lines to your `.github/workflows/your_workflow_name.yml`
 After the workflow is complete, you can see the following results displayed in the GitHub pull request review page.
 ![output](./docs/cpp-lint-action.png)
 
-You can find more comprehensive configurations and usage examples in the `examples/` directory.
+You can find more comprehensive configurations in [there](action.yml) and usage examples in the `examples/` directory.
 
 # Develop cpp-lint-action
 1. cpp-lint-action needs c++20 standard. Ensure your local compiler version supports it.
