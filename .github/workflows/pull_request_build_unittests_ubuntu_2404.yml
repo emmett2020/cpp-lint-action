@@ -51,19 +51,15 @@ jobs:
           ls -lrthR ~/.tools
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
-          # Add executable binary to PATH
-          echo ${PATH}
-          echo ${GITHUB_PATH}
+          # Add executable binary to GITHUB_PATH. The new path will take effect in subsequence steps.
           echo "${HOME}/.tools" >> ${GITHUB_PATH}
-          echo ${PATH}
-          # which ccache
-          ~/.tools/ccache --version
-          # which ninja
 
       - name: Install Compilation Dependent libraries
         run: |
-          sudo apt install -y libboost-all-dev \
-                              libgit2-dev
+          # sudo apt install -y libboost-all-dev \
+          #                     libgit2-dev
+          brew install boost
+          brew install libgit2
 
       - name: Setup C/C++ Compiler and ccache
         run: |
