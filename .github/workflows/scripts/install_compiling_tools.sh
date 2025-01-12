@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Will instal tools to ${HOME}/.tools
-
 set -euo pipefail
 
 # ninja
