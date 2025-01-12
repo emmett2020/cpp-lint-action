@@ -51,6 +51,8 @@ jobs:
           ls -lrthR ~/.tools
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
+      - name: Set path
+        run: |
           # Add executable binary to GITHUB_PATH. The new path will take effect in subsequence steps.
           echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
