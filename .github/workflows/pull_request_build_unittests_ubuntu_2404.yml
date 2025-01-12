@@ -63,7 +63,7 @@ jobs:
           #                     libgit2-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install boost
-          apt install -y libgit2-dev
+          sudo apt install -y libgit2-dev
           # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
 
 
