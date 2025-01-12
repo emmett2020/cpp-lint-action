@@ -65,6 +65,8 @@ jobs:
 
         ls -lrth ${CCACHE_DIR}
 
+        ccache -s -v
+
     - name: Run Unit Tests
       run: ./build/tests/test
 
