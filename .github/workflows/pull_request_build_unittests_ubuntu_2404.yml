@@ -47,9 +47,9 @@ jobs:
           wget https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-linux-x86_64.tar.xz \
                -O ccache.tar.xz
           tar -xf ccache.tar.xz
-          ls ccache-${CCACHE_VERSION}-linux-x86_64/ccache
+          # ls ccache-${CCACHE_VERSION}-linux-x86_64/ccache
           mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.tools/
-          ls -lrthR ~/.tools
+          # ls -lrthR ~/.tools
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
       - name: Set Building Tools Path
@@ -70,11 +70,9 @@ jobs:
 
       - name: Install Building Libraries
         run: |
-          /bin/bash -c "$(curl -sL https://git.io/vokNn)"
-          sudo apt-fast install -y libboost-all-dev libgit2-dev
-
-
-          sudo ls -lrthR /var/cache/apt/archives
+          # /bin/bash -c "$(curl -sL https://git.io/vokNn)"
+          sudo apt-get install -y libboost-all-dev libgit2-dev
+          # sudo ls -lrthR /var/cache/apt/archives
 
       - name: Setup C/C++ Compiler and ccache
         run: |
@@ -112,17 +110,17 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-
 
-      # - name: Create Build Directory
-      #   run: mkdir -p build
-      #
-      # - name: Cache and Restore CMake FetchContent
-      #   id: cmake-fetchcontent-cache
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: build/_deps/
-      #     key: cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}
-      #     restore-keys: |
-      #       cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}
+      - name: Create Build Directory
+        run: mkdir -p build
+
+      - name: Cache and Restore CMake FetchContent
+        id: cmake-fetchcontent-cache
+        uses: actions/cache@v4
+        with:
+          path: build/_deps/
+          key: cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-${{ steps.timestamp.outputs.timestamp }}
+          restore-keys: |
+            cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-
 
       - name: CMake
         run: |
