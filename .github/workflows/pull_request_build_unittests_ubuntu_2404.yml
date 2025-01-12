@@ -58,11 +58,13 @@ jobs:
 
       - name: Install Compilation Dependent libraries
         run: |
+          set -euo pipefail
           # sudo apt install -y libboost-all-dev \
           #                     libgit2-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install boost
           brew install libgit2
+          ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
 
       - name: Setup C/C++ Compiler and ccache
         run: |
