@@ -51,11 +51,14 @@ jobs:
     - name: CMake
       run: |
         set -euo pipefail
+
+        export CCACHE_DIR="${HOME}/.ccache"
         cmake -S . -B build -GNinja              \
           -DCMAKE_BUILD_TYPE="Debug"             \
           -DENABLE_CODE_COVERAGE=ON              \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        ls -lrth ${CCACHE_DIR}
 
     - name: Compile
       run: cmake --build build -v -j`nproc`
