@@ -66,6 +66,7 @@ jobs:
           brew install libgit2
           ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
 
+
       - name: Setup C/C++ Compiler and ccache
         run: |
           set -euo pipefail
@@ -129,7 +130,8 @@ jobs:
             -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache            \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache          \
-            -DFETCHCONTENT_QUIET=off
+            -DFETCHCONTENT_QUIET=off                      \
+            -DBoost_dir=~/.linuxbrew/Cellar/boost/1.87.0
 
       - name: Compile
         run: |
