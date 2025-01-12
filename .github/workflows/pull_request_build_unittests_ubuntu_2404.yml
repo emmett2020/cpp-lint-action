@@ -64,10 +64,21 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-
 
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Cache CMake FetchContent downloads
+        id: cmake-fetchcontent-cache
+        uses: actions/cache@v4
+        with:
+          path: build/_deps/*-src/
+          key: cmake-fetchcontent-${{ runner.os }}-${{ steps.timestamp.outputs.timestamp }}
+          restore-keys: |
+            cmake-fetchcontent-${{ runner.os }}-
+
       - name: CMake
         run: |
           set -euo pipefail
-          echo "Cache hit: ${{ steps.ccache-cache.outputs.cache-hit }}"
           cmake -S . -B build -GNinja                     \
             -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"    \
             -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" \
