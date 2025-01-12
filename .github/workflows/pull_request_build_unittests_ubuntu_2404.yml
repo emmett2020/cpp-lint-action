@@ -52,6 +52,8 @@ jobs:
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
           # Add executable binary to PATH
+          echo ${PATH}
+          echo ${GITHUB_PATH}
           echo "${HOME}/.tools" >> ${GITHUB_PATH}
           echo ${PATH}
           which ccache
