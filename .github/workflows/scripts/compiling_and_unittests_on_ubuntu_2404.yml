@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Compiling Tools
         if: "${{ steps.cache-compiling-tools.outputs.cache-hit == false }}"
-        run: bash ./.github/workflows/scripts/install_compiling_tools.sh
+        run: bash ./.github/workflows/install_compiling_tools.sh
 
       - name: Install Libraries
         run:  sudo apt-get install -y libboost-all-dev libgit2-dev
