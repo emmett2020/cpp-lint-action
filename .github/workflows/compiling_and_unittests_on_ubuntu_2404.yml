@@ -6,7 +6,6 @@ on:
 env:
   NINJA_VERSION: 1.12.1
   CCACHE_VERSION: 4.10.2
-  COMPILING_TOOLS_DIR: "${{ github.workspace }}/.tools"
 
 jobs:
   build-unit-tests:
@@ -35,20 +34,8 @@ jobs:
         with:
           submodules: true
 
-      - name: Cache and Restore Compiling Tools
-        id: compiling-tools-cache
-        uses: actions/cache@v4
-        with:
-          path: ${COMPILING_TOOLS_DIR}
-          key: compiling-tools-${{ runner.os }}
-          restore-keys: compiling-tools-${{ runner.os }}
-
-      - name: Install Compiling Tools
-        if: "${{ steps.cache-compiling-tools.outputs.cache-hit == false }}"
-        run: bash ./.github/workflows/scripts/install_compiling_tools.sh
-
       - name: Install Libraries
-        run:  sudo apt-get install -y libboost-all-dev libgit2-dev
+        run:  sudo apt-get install -y libboost-all-dev libgit2-dev ninja-build ccache
 
       - name: Setup C/C++ Compiler and ccache
         run: |
