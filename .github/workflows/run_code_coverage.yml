@@ -1,20 +1,19 @@
-name: Code Coverage On Ubuntu 24.04
+name: Run Code Coverage On Ubuntu 24.04
 on:
   pull_request:
     branches: [master]
     paths:
       - 'src/**'
 
+env:
+  CC: gcc-13
+  CXX: g++-13
+
 jobs:
   code-coverage:
     name: "code-coverage-on-ubuntu-24.04"
     runs-on: ubuntu-24.04
     steps:
-    - name: Setup C/C++ Compiler
-      run: |
-        echo "CC=gcc-13" >> ${GITHUB_ENV}
-        echo "CXX=g++-13" >> ${GITHUB_ENV}
-
     - name: Install Compilation Dependencies
       run: |
         sudo apt install -y ninja-build

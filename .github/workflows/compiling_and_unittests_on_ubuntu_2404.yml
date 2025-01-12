@@ -1,4 +1,4 @@
-name: Build and Run Unit Tests on Ubuntu 24.04
+name: Compiling and Run Unit Tests on Ubuntu 24.04
 on:
   pull_request:
     branches: [master]
