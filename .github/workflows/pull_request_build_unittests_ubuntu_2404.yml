@@ -3,9 +3,6 @@ on:
   pull_request:
     branches: [master]
 
-env:
-  TIMESTAMP: $(date +"%Y-%m-%d %H:%M:%S")
-
 jobs:
   build-unit-tests:
     name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}"
@@ -24,7 +21,7 @@ jobs:
     steps:
       - name: Install Compilation Dependencies
         run: |
-          sudo apt install -y ninja-build      \
+          sudo apt-fast install -y ninja-build      \
                               libboost-all-dev \
                               libgit2-dev      \
                               ccache
@@ -45,18 +42,17 @@ jobs:
           ccache --version
           ccache --set-config=max_size=500M
 
+      - name: Get Timestamp
+        id: timestamp
+        run: |
+          timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+          echo "Current timestamp: ${timestamp}"
+          echo "timestamp=${timestamp}" >> ${GITHUB_OUTPUT}
 
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           submodules: true
-
-      - name: Get Time Stamp
-        id: timestamp
-        run: |
-          # timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-          echo "Current timestamp: $TIMESTAMP"
-          echo "timestamp=${TIMESTAMP}" >> ${GITHUB_OUTPUT}
 
       - name: Restore ccache
         id: ccache-cache
