@@ -61,7 +61,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/_deps/
-          key: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-
+          key: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.time.outputs.timestamp }}
           restore-keys: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}
 
       - name: Compile
@@ -75,10 +75,6 @@ jobs:
 
           cmake --build build -v -j`nproc`
           ccache -s -v
-
-          # DEBUG
-          touch build/_deps/SHOULD_SEE_ME.txt
-
 
       - name: Run Unit Tests
         run: ./build/tests/test
