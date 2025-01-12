@@ -33,7 +33,7 @@ jobs:
             compilation-tools-${{ runner.os }}
 
       - name: Install Compilation Dependent Tools
-        if: "{{ steps.cache-compilation-tools.outputs.cache-hit == false }}"
+        if: "${{ steps.cache-compilation-tools.outputs.cache-hit == false }}"
         run: |
           set -euo pipefail
 
