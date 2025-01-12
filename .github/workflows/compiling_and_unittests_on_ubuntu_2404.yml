@@ -61,9 +61,6 @@ jobs:
           key: ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.time.outputs.timestamp }}
           restore-keys: ccache-${{ matrix.compiler }}-${{ matrix.version }}-
 
-      # - name: Create Build Directory
-      #   run: mkdir -p build
-
       - name: Cache and Restore CMake FetchContent
         id: fetchcontent-cache
         uses: actions/cache@v4

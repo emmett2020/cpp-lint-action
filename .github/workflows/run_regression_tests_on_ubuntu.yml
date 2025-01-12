@@ -6,6 +6,9 @@ on:
         required: true
         type: string
 
+env:
+  pkg_name: cpp_lint_action
+
 jobs:
   test-different-clang-tool-versions:
     name: "${{ matrix.platform }}-clang-tool-version-${{ matrix.clang_tool_version }}"
@@ -39,8 +42,6 @@ jobs:
       - name: Install Artifacts
         run: |
           set -euo pipefail
-          pkg_name="cpp_lint_action"
-
           tar -xf "art_temp/${{ inputs.artifact-name }}"
           cd ${pkg_name}
           ls -lrth && ./install.sh

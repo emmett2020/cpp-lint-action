@@ -9,6 +9,11 @@ on:
         default: false
         type: boolean
 
+env:
+  CC: gcc-14
+  CXX: g++-14
+  package_name: cpp_lint_action
+
 permissions:
   contents: write
   discussions: write
@@ -24,23 +29,14 @@ jobs:
       release_version: ${{ steps.artifact.outputs.release_version }}
 
     steps:
-      - name: Setup C/C++ Compiler
-        run: |
-          set -euo pipefail
-          echo "CC=gcc-14" >> ${GITHUB_ENV}
-          echo "CXX=g++-14" >> ${GITHUB_ENV}
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Install Compilation Dependencies
         run: |
-          set -euo pipefail
           sudo apt install -y ninja-build      \
                               libboost-all-dev \
                               libgit2-dev
-
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: CMake
         run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE="Release"
@@ -71,7 +67,6 @@ jobs:
             exit 1
           fi
 
-          package_name="cpp_lint_action"
           release_version_str=$(echo ${release_version} | tr '.' '_' | tr '-' '_')
           sha_short=$(echo "${{ github.sha }}" | cut -c1-8)
 
