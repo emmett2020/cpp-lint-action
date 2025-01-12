@@ -27,7 +27,7 @@ jobs:
         id: cache-compilation-tools
         uses: actions/cache@v4
         with:
-          path: ~/.deps/
+          path: ~/.tools/
           key: compilation-tools-${{ runner.os }}
           restore-keys: |
             compilation-tools-${{ runner.os }}
