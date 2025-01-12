@@ -36,7 +36,7 @@ jobs:
       id: ccache-cache
       uses: actions/cache@v4
       with:
-        path: ${HOME}/.ccache
+        path: ~/.ccache
         key: code-coverage-ccache-gcc-13-${{ steps.time.outputs.timestamp }}
         restore-keys: code-coverage-ccache-gcc-13-
 
