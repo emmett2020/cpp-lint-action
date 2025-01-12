@@ -4,8 +4,8 @@ on:
     branches: [master]
 
 env:
-  NINJA_VERSION=1.12.1
-  CCACHE_VERSION=4.10.2
+  NINJA_VERSION: 1.12.1
+  CCACHE_VERSION: 4.10.2
 
 jobs:
   build-unit-tests:
@@ -23,33 +23,33 @@ jobs:
           - { compiler: "clang", version: "18.1.3", build_type: Release, cxxflags: "" }
 
     steps:
-      - name: Cache Compilation Dependencies
-        id: cache-compilation-dependencies
+      - name: Cache Compilation Dependent Tools
+        id: cache-compilation-tools
         uses: actions/cache@v4
         with:
           path: ~/.deps/
-          key: compilation-dependencies-${{ runner.os }}
+          key: compilation-tools-${{ runner.os }}
           restore-keys: |
-            compilation-dependencies-${{ runner.os }}
+            compilation-tools-${{ runner.os }}
 
-      - name: Install Compilation Dependencies
-        if: "{{ steps.cache-compilation-dependencies.outputs.cache-hit == false }}"
+      - name: Install Compilation Dependent Tools
+        if: "{{ steps.cache-compilation-tools.outputs.cache-hit == false }}"
         run: |
           set -euo pipefail
 
           # ninja
           wget https://github.com/ninja-build/ninja/releases/download/v${NINJA_VERSION}/ninja-linux.zip
-          unzip ninja-linux.zip -d ~/.deps/
+          unzip ninja-linux.zip -d ~/.tools/
           rm ninja-linux.zip
 
           # ccache
           wget https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-linux-x86_64.tar.xz \
                -O ccache.tar.xz
           tar -xf ccache.tar.xz
-          mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.deps/
+          mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.tools/
 
-          # Add 
-          echo "PATH=~/.deps/:${PATH}" >> ${GITHUB_ENV}
+          # Add executable binary to PATH
+          echo "PATH=~/.tools/:${PATH}" >> ${GITHUB_ENV}
           echo ${PATH}
 
       - name: Install Other Compilation Dependencies
