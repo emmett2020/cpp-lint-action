@@ -28,9 +28,6 @@ jobs:
           # Add Building Tools Path to GITHUB Path
           echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
-          # Change Permissions for APT Cache
-          sudo chmod -R 777 /var/cache/apt/archives
-
           # Set timestamp
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
           echo "timestamp=${timestamp}" >> ${GITHUB_OUTPUT}
@@ -46,14 +43,6 @@ jobs:
       - name: Install Building Tools
         if: "${{ steps.cache-building-tools.outputs.cache-hit == false }}"
         run: bash ./.github/workflows/scripts/install_building_tools.sh
-
-      - name: Cache and Restore Building Libraries
-        id: cache-apt
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives/**.deb
-          key: apt-${{ runner.os }}
-          restore-keys: apt-${{ runner.os }}
 
       - name: Install Building Libraries
         run:  sudo apt-get install -y libboost-all-dev libgit2-dev
