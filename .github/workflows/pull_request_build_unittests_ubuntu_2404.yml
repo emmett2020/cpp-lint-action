@@ -46,7 +46,9 @@ jobs:
           wget https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-linux-x86_64.tar.xz \
                -O ccache.tar.xz
           tar -xf ccache.tar.xz
+          ls ccache-${CCACHE_VERSION}-linux-x86_64/ccache
           mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.tools/
+          ls -lrthR ~/.tools
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
           # Add executable binary to PATH
