@@ -23,17 +23,17 @@ jobs:
           - { compiler: "clang", version: "18.1.3", build_type: Release, cxxflags: "" }
 
     steps:
-      - name: Cache Compilation Dependent Tools
-        id: cache-compilation-tools
+      - name: Cache Building Tools
+        id: cache-building-tools
         uses: actions/cache@v4
         with:
           path: ~/.tools/
-          key: compilation-tools-${{ runner.os }}
+          key: building-tools-${{ runner.os }}
           restore-keys: |
-            compilation-tools-${{ runner.os }}
+            building-tools-${{ runner.os }}
 
-      - name: Install Compilation Dependent Tools
-        if: "${{ steps.cache-compilation-tools.outputs.cache-hit == false }}"
+      - name: Install Building Tools
+        if: "${{ steps.cache-building-tools.outputs.cache-hit == false }}"
         run: |
           set -euo pipefail
 
@@ -63,9 +63,8 @@ jobs:
           #                     libgit2-dev
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install boost
-          brew install libgit2
+          apt install -y libgit2-dev
           # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
-          # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/libgit2
 
 
       - name: Setup C/C++ Compiler and ccache
@@ -126,14 +125,16 @@ jobs:
       - name: CMake
         run: |
           set -euo pipefail
+
+          boost_dir=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0/lib/cmake/Boost-1.87.0
+
           cmake -S . -B build -GNinja                                   \
             -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"                  \
             -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"               \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache                          \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache                        \
             -DFETCHCONTENT_QUIET=off                                    \
-            -DBoost_DIR=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0/lib/cmake/Boost-1.87.0 \
-            -Dlibgit2_DIR=/home/linuxbrew/.linuxbrew/Cellar/libgit2/1.9.0/lib/cmake/libgit2
+            -DBoost_DIR=${boost_dir}
 
       - name: Compile
         run: |

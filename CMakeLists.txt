@@ -37,7 +37,6 @@ IF(ENABLE_CODE_COVERAGE)
 ENDIF()
 
 find_package(Boost REQUIRED CONFIG COMPONENTS filesystem system regex program_options)
-find_package(libgit2 REQUIRED CONFIG)
 
 configure_file(${config_dir}/version.h.in ${config_dir}/version.h)
 
