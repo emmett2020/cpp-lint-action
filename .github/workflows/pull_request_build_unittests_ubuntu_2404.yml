@@ -57,7 +57,7 @@ jobs:
       - name: Install Building Libraries
         run: sudo apt install -y libboost-all-dev libgit2-dev
 
-      - name: Setup C/C++ Compiler
+      - name: Setup C/C++ Compiler and ccache
         run: |
           set -euo pipefail
           major=$(echo ${{ matrix.version }} | cut -d'.' -f1)
@@ -69,15 +69,13 @@ jobs:
             echo "CXX=g++-${major}" >> ${GITHUB_ENV}
           fi
 
-          # echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
-          # ccache --version
-          # ccache --set-config=max_size=500M
+          echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
+          ccache --version
 
       - name: Get Timestamp
         id: timestamp
         run: |
           timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-          echo "Current timestamp: ${timestamp}"
           echo "timestamp=${timestamp}" >> ${GITHUB_OUTPUT}
 
       - name: Checkout Repository
@@ -85,7 +83,7 @@ jobs:
         with:
           submodules: true
 
-      - name: Restore ccache
+      - name: Cache and Restore ccache
         id: ccache-cache
         uses: actions/cache@v4
         with:
@@ -97,7 +95,7 @@ jobs:
       - name: Create Build Directory
         run: mkdir -p build
 
-      - name: Cache CMake FetchContent
+      - name: Cache and Restore CMake FetchContent
         id: cmake-fetchcontent-cache
         uses: actions/cache@v4
         with:
@@ -105,12 +103,6 @@ jobs:
           key: cmake-fetchcontent-${{ runner.os }}
           restore-keys: |
             cmake-fetchcontent-${{ runner.os }}
-
-
-      - name: DEBUG
-        run: |
-
-          ls -lrthR build/
 
       - name: CMake
         run: |
@@ -124,9 +116,7 @@ jobs:
             -DFETCHCONTENT_QUIET=off
 
       - name: Compile
-        run: |
-          cmake --build build -v -j`nproc`
-          ccache -s -v
+        run: cmake --build build -v -j`nproc`
 
       - name: Run Unit Tests
         run: ./build/tests/test
