@@ -58,6 +58,7 @@ jobs:
         run: |
           # sudo apt install -y libboost-all-dev \
           #                     libgit2-dev
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install boost
           brew install libgit2
 
