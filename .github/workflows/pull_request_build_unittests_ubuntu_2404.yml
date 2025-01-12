@@ -90,6 +90,7 @@ jobs:
 
           echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
           ccache --version
+          ccache --set-config=max_size=500M
 
       - name: Get Timestamp
         id: timestamp
