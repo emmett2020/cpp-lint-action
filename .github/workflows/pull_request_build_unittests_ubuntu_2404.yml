@@ -77,6 +77,11 @@ jobs:
           restore-keys: |
             cmake-fetchcontent-${{ runner.os }}-
 
+
+      - name: DEBUG
+        run: |
+          ls -lrth build/
+
       - name: CMake
         run: |
           set -euo pipefail
