@@ -51,9 +51,11 @@ jobs:
     - name: CMake
       run: |
         set -euo pipefail
-        cmake -S . -B build -GNinja  \
-          -DCMAKE_BUILD_TYPE="Debug" \
-          -DENABLE_CODE_COVERAGE=ON
+        cmake -S . -B build -GNinja              \
+          -DCMAKE_BUILD_TYPE="Debug"             \
+          -DENABLE_CODE_COVERAGE=ON              \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
     - name: Compile
       run: cmake --build build -v -j`nproc`

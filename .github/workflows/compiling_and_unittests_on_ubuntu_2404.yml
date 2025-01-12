@@ -52,7 +52,6 @@ jobs:
           ccache --version
           ccache --set-config=max_size=500M
 
-
       - name: Cache and Restore ccache
         id: ccache-cache
         uses: actions/cache@v4
