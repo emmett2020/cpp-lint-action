@@ -59,7 +59,7 @@ jobs:
         id: cache-apt
         uses: actions/cache@v4
         with:
-          path: /var/cache/apt/archives/
+          path: /var/cache/apt/archives/**.deb
           key: cache-apt-${{ runner.os }}
           restore-keys: |
             cache-apt-${{ runner.os }}
