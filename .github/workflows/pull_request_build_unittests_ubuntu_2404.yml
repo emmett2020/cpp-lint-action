@@ -56,7 +56,9 @@ jobs:
         run: echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
       - name: Install Building Libraries
-        run: sudo apt install -y libboost-all-dev libgit2-dev
+        run: |
+          /bin/bash -c "$(curl -sL https://git.io/vokNn)"
+          sudo apt-fast install -y libboost-all-dev libgit2-dev
 
       - name: Setup C/C++ Compiler and ccache
         run: |
