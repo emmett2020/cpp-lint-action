@@ -65,7 +65,7 @@ jobs:
           brew install boost
           brew install libgit2
           # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
-          ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/libgit2
+          # ls -lrthR /home/linuxbrew/.linuxbrew/Cellar/libgit2
 
 
       - name: Setup C/C++ Compiler and ccache
@@ -132,7 +132,8 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache                          \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache                        \
             -DFETCHCONTENT_QUIET=off                                    \
-            -DBoost_DIR=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0/lib/cmake/Boost-1.87.0
+            -DBoost_DIR=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0/lib/cmake/Boost-1.87.0 \
+            -Dlibgit2_DIR=/home/linuxbrew/.linuxbrew/Cellar/libgit2/1.9.0/lib/cmake/libgit2
 
       - name: Compile
         run: |
