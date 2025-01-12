@@ -131,7 +131,7 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=ccache                          \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache                        \
             -DFETCHCONTENT_QUIET=off                                    \
-            -DBoost_DIR=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0
+            -DBoost_DIR=/home/linuxbrew/.linuxbrew/Cellar/boost/1.87.0/lib/cmake/Boost-1.87.0
 
       - name: Compile
         run: |
