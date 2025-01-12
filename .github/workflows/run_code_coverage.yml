@@ -48,23 +48,16 @@ jobs:
         key: code-coverage-fetchcontent-gcc-13-${{ steps.time.outputs.timestamp }}
         restore-keys: code-coverage-fetchcontent-gcc-13-
 
-    - name: CMake
+    - name: Compilation
       run: |
         set -euo pipefail
-
         export CCACHE_DIR="${HOME}/.ccache"
-        ccache -v
-
         cmake -S . -B build -GNinja              \
           -DCMAKE_BUILD_TYPE="Debug"             \
           -DENABLE_CODE_COVERAGE=ON              \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
         cmake --build build -v -j`nproc`
-
-        ls -lrth ${CCACHE_DIR}
-
         ccache -s -v
 
     - name: Run Unit Tests
