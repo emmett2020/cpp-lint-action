@@ -46,7 +46,7 @@ jobs:
         run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE="Release"
 
       - name: Compile
-        run: cmake --build build -v -j8
+        run: cmake --build build -v -j`nproc`
 
       - name: Run Unit Tests
         run:  ./build/tests/test
