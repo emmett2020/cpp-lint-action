@@ -72,9 +72,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ccache
-          key: ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-${{ steps.prepare.outputs.timestamp }}
+          key: ccache-${{ matrix.compiler }}-${{ matrix.version }-${{ steps.prepare.outputs.timestamp }}
           restore-keys: |
-            ccache-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-
+            ccache-${{ matrix.compiler }}-${{ matrix.version }}-
 
       - name: Create Build Directory
         run: mkdir -p build
@@ -84,23 +84,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/_deps/
-          key: cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-${{ steps.prepare.outputs.timestamp }}
+          key: cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ steps.prepare.outputs.timestamp }}
           restore-keys: |
-            cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-
-
-      - name: CMake
-        run: |
-          set -euo pipefail
-
-          cmake -S . -B build -GNinja                                   \
-            -DCMAKE_CXX_FLAGS="${{ matrix.cxxflags }}"                  \
-            -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}"               \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache                          \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache                        \
-            -DFETCHCONTENT_QUIET=off
+            cmake-fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-
 
       - name: Compile
         run: |
+          set -euo pipefail
+          cmake -S . -B build -GNinja              \
+            -DCMAKE_BUILD_TYPE=Release             \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
           cmake --build build -v -j`nproc`
           ccache -s -v
 
