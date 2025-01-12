@@ -131,7 +131,9 @@ jobs:
             -DFETCHCONTENT_QUIET=off
 
       - name: Compile
-        run: cmake --build build -v -j`nproc`
+        run: |
+          cmake --build build -v -j`nproc`
+          ccache -s -v
 
       - name: Run Unit Tests
         run: ./build/tests/test
