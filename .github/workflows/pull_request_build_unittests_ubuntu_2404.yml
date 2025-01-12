@@ -47,12 +47,15 @@ jobs:
                -O ccache.tar.xz
           tar -xf ccache.tar.xz
           mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.tools/
+          rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
           # Add executable binary to PATH
-          echo "PATH=~/.tools/:${PATH}" >> ${GITHUB_ENV}
+          echo "PATH=${HOME}/.tools/:${PATH}" >> ${GITHUB_ENV}
           echo ${PATH}
+          which ccache
+          which ninja
 
-      - name: Install Other Compilation Dependencies
+      - name: Install Compilation Dependent libraries
         run: |
           sudo apt install -y libboost-all-dev \
                               libgit2-dev
@@ -97,7 +100,7 @@ jobs:
       - name: Create Build Directory
         run: mkdir -p build
 
-      - name: Cache CMake FetchContent Downloads
+      - name: Cache CMake FetchContent
         id: cmake-fetchcontent-cache
         uses: actions/cache@v4
         with:
