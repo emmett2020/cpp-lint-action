@@ -36,7 +36,7 @@ IF(ENABLE_CODE_COVERAGE)
   set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} --coverage -fprofile-abs-path -g -O0")
 ENDIF()
 
-find_package(Boost 1.83.0 REQUIRED CONFIG COMPONENTS filesystem system regex program_options)
+find_package(Boost REQUIRED CONFIG COMPONENTS filesystem system regex program_options)
 
 configure_file(${config_dir}/version.h.in ${config_dir}/version.h)
 

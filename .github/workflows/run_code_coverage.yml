@@ -1,0 +1,79 @@
+name: Run Code Coverage On Ubuntu 24.04
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'src/**'
+
+env:
+  CC: gcc-13
+  CXX: g++-13
+
+jobs:
+  code-coverage:
+    name: "code-coverage-on-ubuntu-24.04"
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Get Current Time
+      id: time
+      run: |
+        timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+        echo ${timestamp}
+        echo "timestamp=${timestamp}" >> ${GITHUB_OUTPUT}
+
+    - name: Install Compilation Dependencies
+      run: |
+        sudo apt install -y ninja-build
+        sudo apt install -y libboost-all-dev
+        sudo apt install -y libgit2-dev
+        sudo apt install -y gcovr
+        sudo apt install -y ccache
+
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Cache and Restore ccache
+      id: ccache-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: code-coverage-ccache-gcc-13-${{ steps.time.outputs.timestamp }}
+        restore-keys: code-coverage-ccache-gcc-13-
+
+    - name: Cache and Restore CMake FetchContent
+      id: fetchcontent-cache
+      uses: actions/cache@v4
+      with:
+        path: build/_deps/
+        key: code-coverage-fetchcontent-gcc-13-${{ steps.time.outputs.timestamp }}
+        restore-keys: code-coverage-fetchcontent-gcc-13-
+
+    - name: Compilation
+      run: |
+        set -euo pipefail
+        export CCACHE_DIR="${HOME}/.ccache"
+        cmake -S . -B build -GNinja              \
+          -DCMAKE_BUILD_TYPE="Debug"             \
+          -DENABLE_CODE_COVERAGE=ON              \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        cmake --build build -v -j`nproc`
+        ccache -s -v
+
+    - name: Run Unit Tests
+      run: ./build/tests/test
+
+    - name: Collection Result
+      run: |
+        set -euo pipefail
+        gcov -v
+        gcovr --version
+        gcovr -v .
+
+    # INFO: you must have already created CODECOV_TOKEN referenced by on codecov specification.
+    - name: Upload Coverage Report to codecov.io
+      uses: codecov/codecov-action@v4
+      with:
+        file: build/coverage.html
+        token: ${{ secrets.CODECOV_TOKEN }} # required
+        verbose: true

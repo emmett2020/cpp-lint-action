@@ -6,6 +6,9 @@ on:
         required: true
         type: string
 
+env:
+  pkg_name: cpp_lint_action
+
 jobs:
   test-different-clang-tool-versions:
     name: "${{ matrix.platform }}-clang-tool-version-${{ matrix.clang_tool_version }}"
@@ -28,8 +31,7 @@ jobs:
         uses: actions/checkout@v4
  
       - name: Make Test Repository
-        run: |
-          bash ./.github/workflows/basic_test.sh
+        run: bash ./.github/workflows/scripts/basic_regression_test.sh
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -40,8 +42,6 @@ jobs:
       - name: Install Artifacts
         run: |
           set -euo pipefail
-          pkg_name="cpp_lint_action"
-
           tar -xf "art_temp/${{ inputs.artifact-name }}"
           cd ${pkg_name}
           ls -lrth && ./install.sh
