@@ -70,10 +70,7 @@ jobs:
 
       - name: Install Building Libraries
         run: |
-          # /bin/bash -c "$(curl -sL https://git.io/vokNn)"
-
           sudo apt-get install -y libboost-all-dev libgit2-dev
-          # sudo ls -lrthR /var/cache/apt/archives
 
       - name: Setup C/C++ Compiler and ccache
         run: |
@@ -87,7 +84,7 @@ jobs:
             echo "CXX=g++-${major}" >> ${GITHUB_ENV}
           fi
 
-          echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
+          # echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
           ccache --version
           ccache --set-config=max_size=500M
 
