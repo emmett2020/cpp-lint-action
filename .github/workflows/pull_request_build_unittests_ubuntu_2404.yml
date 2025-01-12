@@ -55,6 +55,10 @@ jobs:
       - name: Set Building Tools Path
         run: echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
+      - name: Change permissions for APT cache
+        run: |
+          sudo chmod -R 777 /var/cache/apt/archives
+
       - name: Cache and Restore Building Libraries
         id: cache-apt
         uses: actions/cache@v4
