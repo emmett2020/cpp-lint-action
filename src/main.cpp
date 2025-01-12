@@ -169,3 +169,5 @@ auto main(int argc, char **argv) -> int {
   }
   return all_passed(reporters) ? 0 : 1;
 }
+
+
