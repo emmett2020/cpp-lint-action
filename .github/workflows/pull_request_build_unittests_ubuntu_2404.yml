@@ -56,8 +56,9 @@ jobs:
           echo ${GITHUB_PATH}
           echo "${HOME}/.tools" >> ${GITHUB_PATH}
           echo ${PATH}
-          which ccache
-          which ninja
+          # which ccache
+          ~/.tools/ccache --version
+          # which ninja
 
       - name: Install Compilation Dependent libraries
         run: |
