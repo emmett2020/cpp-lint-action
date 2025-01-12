@@ -61,7 +61,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/_deps/
-          key: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}
+          key: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}-
           restore-keys: fetchcontent-${{ matrix.compiler }}-${{ matrix.version }}
 
       - name: Compile
