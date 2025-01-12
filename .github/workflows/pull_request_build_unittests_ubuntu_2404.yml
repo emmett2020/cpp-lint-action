@@ -52,7 +52,7 @@ jobs:
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
           # Add executable binary to PATH
-          echo "PATH=${HOME}/.tools/:${PATH}" >> ${GITHUB_ENV}
+          echo "${HOME}/.tools" >> ${GITHUB_PATH}
           echo ${PATH}
           which ccache
           which ninja
