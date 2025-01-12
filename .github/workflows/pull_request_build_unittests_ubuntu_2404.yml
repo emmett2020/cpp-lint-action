@@ -9,18 +9,17 @@ env:
 
 jobs:
   build-unit-tests:
-    name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}"
+    name: "ubuntu-24.04-${{ matrix.compiler }}-${{ matrix.version }"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         include:
           # Details: https://github.com/actions/runner-images
-          - { compiler: "gcc",   version: "12.3.0", build_type: Release, cxxflags: "" }
-          - { compiler: "gcc",   version: "13.3.0", build_type: Release, cxxflags: "" }
-          - { compiler: "gcc",   version: "14.2.0", build_type: Release, cxxflags: "" }
-          - { compiler: "clang", version: "16.1.6", build_type: Release, cxxflags: "" }
-          - { compiler: "clang", version: "18.1.3", build_type: Release, cxxflags: "" }
+          - { compiler: "gcc",   version: "12.3.0" }
+          - { compiler: "gcc",   version: "14.2.0" }
+          - { compiler: "clang", version: "16.1.6" }
+          - { compiler: "clang", version: "18.1.3" }
 
     steps:
       - name: Cache and Restore Building Tools
@@ -29,41 +28,25 @@ jobs:
         with:
           path: ~/.tools/
           key: building-tools-${{ runner.os }}
-          restore-keys: |
-            building-tools-${{ runner.os }}
+          restore-keys: building-tools-${{ runner.os }}
 
       - name: Install Building Tools
         if: "${{ steps.cache-building-tools.outputs.cache-hit == false }}"
-        run: |
-          set -euo pipefail
-
-          # ninja
-          wget https://github.com/ninja-build/ninja/releases/download/v${NINJA_VERSION}/ninja-linux.zip
-          unzip ninja-linux.zip -d ~/.tools/
-          rm ninja-linux.zip
-
-          # ccache
-          wget https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-linux-x86_64.tar.xz \
-               -O ccache.tar.xz
-          tar -xf ccache.tar.xz
-          mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.tools/
-          rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
+        run: bash ./.github/workflows/scripts/install_building_tools.sh
 
       - name: Set Building Tools Path
         run: echo "${HOME}/.tools" >> ${GITHUB_PATH}
 
-      - name: Change permissions for APT cache
-        run: |
-          sudo chmod -R 666 /var/cache/apt/archives
+      - name: Change Permissions for APT Cache
+        run: sudo chmod -R 777 /var/cache/apt/archives
 
       - name: Cache and Restore Building Libraries
         id: cache-apt
         uses: actions/cache@v4
         with:
           path: /var/cache/apt/archives/**.deb
-          key: cache-apt-${{ runner.os }}
-          restore-keys: |
-            cache-apt-${{ runner.os }}
+          key: apt-${{ runner.os }}
+          restore-keys: apt-${{ runner.os }}
 
       - name: Install Building Libraries
         run: |
@@ -81,7 +64,6 @@ jobs:
             echo "CXX=g++-${major}" >> ${GITHUB_ENV}
           fi
 
-          # echo "CCACHE_DIR=$(realpath ~/.ccache)" >> ${GITHUB_ENV}
           ccache --version
           ccache --set-config=max_size=500M
 
