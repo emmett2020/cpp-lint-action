@@ -37,7 +37,6 @@ jobs:
         run: |
           set -euo pipefail
 
-
           # ninja
           wget https://github.com/ninja-build/ninja/releases/download/v${NINJA_VERSION}/ninja-linux.zip
           unzip ninja-linux.zip -d ~/.tools/
@@ -47,9 +46,7 @@ jobs:
           wget https://github.com/ccache/ccache/releases/download/v${CCACHE_VERSION}/ccache-${CCACHE_VERSION}-linux-x86_64.tar.xz \
                -O ccache.tar.xz
           tar -xf ccache.tar.xz
-          # ls ccache-${CCACHE_VERSION}-linux-x86_64/ccache
           mv ccache-${CCACHE_VERSION}-linux-x86_64/ccache ~/.tools/
-          # ls -lrthR ~/.tools
           rm -rf ccache.tar.xz  ccache-${CCACHE_VERSION}-linux-x86_64/
 
       - name: Set Building Tools Path
@@ -57,7 +54,7 @@ jobs:
 
       - name: Change permissions for APT cache
         run: |
-          sudo chmod -R 777 /var/cache/apt/archives
+          sudo chmod -R 666 /var/cache/apt/archives
 
       - name: Cache and Restore Building Libraries
         id: cache-apt
@@ -134,7 +131,6 @@ jobs:
       - name: Compile
         run: |
           cmake --build build -v -j`nproc`
-
           ccache -s -v
 
       - name: Run Unit Tests
