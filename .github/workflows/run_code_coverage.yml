@@ -53,19 +53,20 @@ jobs:
         set -euo pipefail
 
         export CCACHE_DIR="${HOME}/.ccache"
+        ccache -v
+
         cmake -S . -B build -GNinja              \
           -DCMAKE_BUILD_TYPE="Debug"             \
           -DENABLE_CODE_COVERAGE=ON              \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache     \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+        cmake --build build -v -j`nproc`
+
         ls -lrth ${CCACHE_DIR}
 
-    - name: Compile
-      run: cmake --build build -v -j`nproc`
-
     - name: Run Unit Tests
-      run: |
-        ./build/tests/test
+      run: ./build/tests/test
 
     - name: Collection Result
       run: |
