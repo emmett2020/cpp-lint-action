@@ -39,7 +39,7 @@ jobs:
           restore-keys: compiling-tools-${{ runner.os }}
 
       - name: Install Compiling Tools
-        if: "${{ steps.cache-compiling-tools.outputs.cache-hit == false }}"
+        # if: "${{ steps.cache-compiling-tools.outputs.cache-hit == false }}"
         run: |
           bash ./.github/workflows/install_compiling_tools.sh
 
