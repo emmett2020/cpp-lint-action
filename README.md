@@ -1,5 +1,5 @@
 # cpp-lint-action
-![Ubuntu CI](https://github.com/emmett2020/cpp-lint-action/actions/workflows/pull_request_build_unittests_ubuntu_2404.yml/badge.svg)
+![Ubuntu CI](https://github.com/emmett2020/cpp-lint-action/actions/workflows/compiling_and_unittests_on_ubuntu_2404.yml/badge.svg)
 ![Apache](https://img.shields.io/github/license/emmett2020/cpp-lint-action)
 [![codecov](https://codecov.io/gh/emmett2020/cpp-lint-action/graph/badge.svg?token=BO88mIYJ49)](https://codecov.io/gh/emmett2020/cpp-lint-action)
 ![release](https://img.shields.io/github/release/emmett2020/cpp-lint-action)
@@ -19,7 +19,7 @@ Use cpp-lint-action on Github workflow is a easy thing.
 
 Just add follow lines to your `.github/workflows/your_workflow_name.yml`
 ```yaml
-- uses: emmett2020/cpp-linter@v1
+- uses: emmett2020/cpp-lint-action@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
