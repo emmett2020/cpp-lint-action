@@ -17,6 +17,8 @@
 
 #include "context.h"
 
+#include <algorithm>
+
 #include <spdlog/spdlog.h>
 
 #include "github/common.h"
@@ -71,12 +73,18 @@ namespace lint::tool::clang_tidy {
               result.ignored.size()};
     }
 
-    auto get_detail_result([[maybe_unused]] const runtime_context &context)
-      -> std::string override {
+    auto get_detail_result([[maybe_unused]] const runtime_context &context) -> std::string override {
       spdlog::trace("Enter clang_tidy::reporter_t::get_detail_result()");
 
-      auto ret = ""s;
+      auto ret   = ""s;
+      auto files = std::vector<std::string>{};
       for (const auto &[name, failed]: result.fails) {
+        files.push_back(name);
+      }
+      std::sort(files.begin(), files.end());
+
+      for (const auto &name: files) {
+        const auto &failed = result.fails.at(name);
         for (const auto &diag: failed.diags) {
           // use relative file name rather than diag.header.file_name which is
           // absolute name
@@ -99,9 +107,17 @@ namespace lint::tool::clang_tidy {
       auto comments = github::review_comments{};
 
       // For each failed file:
+      auto files = std::vector<std::string>{};
       for (const auto &[file, per_file_result]: result.fails) {
-        assert(per_file_result.file_path == file);
-        assert(context.patches.contains(file));
+        files.push_back(file);
+      }
+      std::sort(files.begin(), files.end());
+
+      for (const auto &file: files) {
+        if (!context.patches.contains(file)) {
+          continue;
+        }
+        const auto &per_file_result = result.fails.at(file);
 
         const auto &patch   = context.patches.at(file);
         const auto num_hunk = git::patch::num_hunks(*patch);
@@ -109,7 +125,6 @@ namespace lint::tool::clang_tidy {
         // For each clang-tidy diagnostic result in current file:
         for (const auto &diag: per_file_result.diags) {
           auto row = std::stoi(diag.header.row_idx);
-          auto col = std::stoi(diag.header.col_idx);
 
           // Check current diagnostic is in diff hunk.
           auto pos = std::size_t{0};
@@ -120,9 +135,13 @@ namespace lint::tool::clang_tidy {
             } else {
               auto comment     = github::review_comment{};
               comment.path     = file;
-              comment.position = pos + row - hunk.new_start + 1;
-              comment.body     = diag.header.brief + diag.header.checks;
+              comment.position = pos + static_cast<std::size_t>(row - hunk.new_start) + 1;
+              comment.body     = fmt::format("clang-tidy {}: {} [{}]",
+                                              diag.header.serverity,
+                                              diag.header.brief,
+                                              diag.header.checks);
               comments.emplace_back(std::move(comment));
+              break;
             }
           }
         }

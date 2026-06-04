@@ -30,6 +30,9 @@ jobs:
         run: |
           set -euo pipefail
           mv "${{ inputs.artifact-name }}" "${{ inputs.distribution-name }}"
+          mv "${{ inputs.artifact-name }}.sha256" "${{ inputs.distribution-name }}.sha256"
+          sed -i "s/${{ inputs.artifact-name }}/${{ inputs.distribution-name }}/" \
+            "${{ inputs.distribution-name }}.sha256"
 
       - name: Release Artifacts to Github Release Page
         uses: softprops/action-gh-release@v2
@@ -38,3 +41,4 @@ jobs:
           tag_name: v${{ inputs.release-version }}
           files: |
             ${{ inputs.distribution-name }}
+            ${{ inputs.distribution-name }}.sha256

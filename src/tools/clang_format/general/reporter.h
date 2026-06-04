@@ -15,6 +15,7 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <utility>
 
 #include <git2/diff.h>
@@ -47,7 +48,12 @@ namespace lint::tool::clang_format {
     auto get_detail_result([[maybe_unused]] const runtime_context &context)
       -> std::string override {
       auto content = ""s;
+      auto files = std::vector<std::string>{};
       for (const auto &[name, failed]: result.fails) {
+        files.push_back(name);
+      }
+      std::sort(files.begin(), files.end());
+      for (const auto &name: files) {
         auto one  = fmt::format("- {}\n", name);
         content  += one;
       }
@@ -58,9 +64,48 @@ namespace lint::tool::clang_format {
       return result.failed_commands;
     }
 
-    auto make_review_comment([[maybe_unused]] const runtime_context &context)
-      -> github::review_comments override {
-      return {};
+    auto make_review_comment(const runtime_context &context) -> github::review_comments override {
+      auto comments = github::review_comments{};
+      auto files = std::vector<std::string>{};
+      for (const auto &[file, per_file_result]: result.fails) {
+        files.push_back(file);
+      }
+      std::sort(files.begin(), files.end());
+
+      for (const auto &file: files) {
+        if (!context.patches.contains(file)) {
+          continue;
+        }
+        const auto &per_file_result = result.fails.at(file);
+        const auto &patch           = context.patches.at(file);
+        const auto num_hunk         = git::patch::num_hunks(*patch);
+
+        auto rows = std::vector<std::size_t>{};
+        for (const auto &[row, replacements]: per_file_result.replacements) {
+          rows.push_back(row);
+        }
+        std::sort(rows.begin(), rows.end());
+
+        for (const auto row: rows) {
+          const auto row_number = static_cast<int>(row);
+          auto pos = std::size_t{0};
+          for (int hunk_idx = 0; hunk_idx < num_hunk; ++hunk_idx) {
+            auto [hunk, num_lines] = git::patch::get_hunk(*patch, hunk_idx);
+            if (!git::hunk::is_row_in_hunk(hunk, row_number)) {
+              pos += num_lines;
+              continue;
+            }
+
+            auto comment     = github::review_comment{};
+            comment.path     = file;
+            comment.position = pos + static_cast<std::size_t>(row_number - hunk.new_start) + 1;
+            comment.body     = "clang-format would reformat this line.";
+            comments.emplace_back(std::move(comment));
+            break;
+          }
+        }
+      }
+      return comments;
     }
 
     void write_to_action_output([[maybe_unused]] const runtime_context &ctx) override {

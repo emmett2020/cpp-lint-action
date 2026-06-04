@@ -16,6 +16,7 @@
 
 #include "tools/base_reporter.h"
 
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <string_view>
@@ -78,11 +79,18 @@ namespace lint::tool {
         }
       }
 
+      auto notes = ""s;
+      if (!context.report_notes.empty()) {
+        notes = "\n## Notes\n";
+        for (const auto &note: context.report_notes) {
+          notes += fmt::format("- {}\n", note);
+        }
+      }
       static const auto reproduce_summary =
         "<summary> :mag_right: Steps to <strong>reproduce</strong> this result in your local environment</summary>\n\n"s;
       details += fmt::format(details_fmt, reproduce_summary + make_reproduce_spec(reporters));
 
-      return fmt::format("{}{}{}{}{}", header, table_header, table_sep_line, table_rows, details);
+      return fmt::format("{}{}{}{}{}{}", header, table_header, table_sep_line, table_rows, notes, details);
     }
 
   } // namespace
@@ -119,15 +127,36 @@ namespace lint::tool {
     github_client.add_or_update_issue_comment(context, make_detail_reporter(context, reporters));
   }
 
-  void comment_on_github_pull_request_review(const runtime_context &context,
-                                             const std::vector<reporter_base_ptr> &reporters) {
-    auto github_client = github::client{};
-    auto comments      = github::review_comments{};
+  auto collect_pull_request_review_comments(runtime_context &context,
+                                            const std::vector<reporter_base_ptr> &reporters)
+    -> github::review_comments {
+    auto comments = github::review_comments{};
     for (const auto &reporter: reporters) {
       auto ret = reporter->make_review_comment(context);
       comments.insert(comments.end(), ret.begin(), ret.end());
     }
-    auto body = github::make_review_str(comments);
+
+    const auto original_size = comments.size();
+    if (original_size > context.max_review_comments) {
+      comments.resize(context.max_review_comments);
+      context.report_notes.push_back(
+        fmt::format("Pull request review comments were truncated from {} to {}",
+                    original_size,
+                    context.max_review_comments));
+    }
+
+    return comments;
+  }
+
+  void comment_on_github_pull_request_review(const runtime_context &context,
+                                             const github::review_comments &comments) {
+    if (comments.empty()) {
+      spdlog::info("Skip pull request review because there are no inline comments");
+      return;
+    }
+
+    auto github_client = github::client{};
+    auto body          = github::make_review_str(comments);
     github_client.post_pull_request_review(context, body);
   }
 } // namespace lint::tool

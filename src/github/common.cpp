@@ -15,31 +15,70 @@
  */
 #include "common.h"
 
+#include <exception>
+#include <fstream>
+#include <optional>
+#include <vector>
+
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include "utils/env_manager.h"
 #include "utils/error.h"
 
 namespace lint::github {
   namespace {
+    auto is_debug_enabled() -> bool {
+      auto value = boost::algorithm::to_lower_copy(env::get(debug_cpp_lint_action));
+      return value == "1" || value == "true" || value == "yes";
+    }
+
     // PR merge branch refs/pull/PULL_REQUEST_NUMBER/merge
-    auto parse_pr_number(const std::string &ref_name) -> std::int32_t {
-      spdlog::trace("Enter parse_pr_number()");
+    auto parse_pr_number_from_ref(const std::string &ref_name) -> std::optional<std::int32_t> {
+      spdlog::trace("Enter parse_pr_number_from_ref()");
 
       auto parts = ranges::views::split(ref_name, '/') | ranges::to<std::vector<std::string>>();
-      throw_if(parts.size() != 4, fmt::format("ref_name format error: {}", ref_name));
-      auto res = std::stoi(parts[2]);
+      if (parts.size() != 4) {
+        return std::nullopt;
+      }
+      auto res = std::int32_t{};
+      try {
+        res = std::stoi(parts[2]);
+      } catch (const std::exception &) {
+        return std::nullopt;
+      }
       spdlog::trace("parse pr number uses: {} and got pull-request number: {}", ref_name, res);
       return res;
     }
 
-    void check_env(const github_env &env) {
+    auto parse_pr_number_from_event_path(const std::string &event_path)
+      -> std::optional<std::int32_t> {
+      spdlog::trace("Enter parse_pr_number_from_event_path()");
+      if (event_path.empty()) {
+        return std::nullopt;
+      }
+
+      auto file = std::ifstream{event_path};
+      if (!file.is_open()) {
+        spdlog::debug("Cannot open GitHub event payload: {}", event_path);
+        return std::nullopt;
+      }
+
+      try {
+        auto payload = nlohmann::json::parse(file);
+        if (payload.contains("number") && payload["number"].is_number_integer()) {
+          return payload["number"].get<std::int32_t>();
+        }
+      } catch (const std::exception &err) {
+        spdlog::debug("Cannot parse GitHub event payload {}: {}", event_path, err.what());
+      }
+      return std::nullopt;
+    }
+
+    void check_base_env(const github_env &env) {
       spdlog::debug("Start to check github environment variables");
 
-      throw_if(env.repository.empty(), "empty git repository, check env: GITHUB_REPOSITORY");
-      throw_if(env.token.empty(), "empty token, check env: GITHUB_TOKEN");
       throw_if(env.event_name.empty(), "empty git event, check env: GITHUB_EVENT_NAME");
-      throw_if(env.github_ref.empty(), "empty github ref, check env: GITHUB_REF");
       throw_if(env.github_sha.empty(), "empty github sha, check env: GITHUB_SHA");
-      throw_if(env.github_ref_type.empty(), "empty git ref type, check env: GITHUB_REF_TYPE");
       throw_if(env.workspace.empty(),
                "empty git repository workspace, check env: GITHUB_WORKSPACE");
     }
@@ -48,7 +87,7 @@ namespace lint::github {
       spdlog::debug("Github Envionment Variables:");
       spdlog::debug("--------------------------------------------------");
       spdlog::debug("git repository:{}", env.repository);
-      spdlog::debug("git token:{}", env.token);
+      spdlog::debug("git token:{}", env.token.empty() ? "" : "***");
       spdlog::debug("git event name:{}", env.event_name);
       spdlog::debug("git base ref:{}", env.base_ref);
       spdlog::debug("git head ref:{}", env.head_ref);
@@ -56,6 +95,7 @@ namespace lint::github {
       spdlog::debug("git sha:{}", env.github_sha);
       spdlog::debug("git ref type:{}", env.github_ref_type);
       spdlog::debug("git workspace:{}", env.workspace);
+      spdlog::debug("git event path:{}", env.event_path);
       spdlog::debug("");
     }
 
@@ -66,7 +106,7 @@ namespace lint::github {
 
     auto env = github_env{};
 
-    if (env::get(debug_cpp_lint_action).empty()) {
+    if (!is_debug_enabled()) {
       // On real user's workflow
       env.repository      = env::get(github_repository);
       env.token           = env::get(github_token);
@@ -77,8 +117,7 @@ namespace lint::github {
       env.github_sha      = env::get(github_sha);
       env.github_ref_type = env::get(github_ref_type);
       env.workspace       = env::get(github_workspace);
-      print_env(env);
-      check_env(env);
+      env.event_path      = env::get(github_event_path);
     } else {
       // Only our test workflow.
       env.repository      = env::get("DEBUG_GITHUB_REPOSITORY");
@@ -90,9 +129,17 @@ namespace lint::github {
       env.github_sha      = env::get("DEBUG_GITHUB_SHA");
       env.github_ref_type = env::get("DEBUG_GITHUB_REF_TYPE");
       env.workspace       = env::get("DEBUG_GITHUB_WORKSPACE");
+      env.event_path      = env::get("DEBUG_GITHUB_EVENT_PATH");
     }
 
+    print_env(env);
+    check_base_env(env);
     return env;
+  }
+
+  auto is_pull_request_event(std::string_view event_name) -> bool {
+    return event_name == github_event_pull_request
+        || event_name == github_event_pull_request_target;
   }
 
   void fill_context(const github_env &env, runtime_context &ctx) {
@@ -106,11 +153,41 @@ namespace lint::github {
     // For reporter
     ctx.token                  = env.token;
     ctx.repo_pair              = env.repository;
-    bool needs_parse_pr_number = ranges::contains(github_pull_request_events, ctx.event_name)
-                              && (ctx.enable_comment_on_issue || ctx.enable_pull_request_review);
-    if (needs_parse_pr_number) {
-      ctx.pr_number = parse_pr_number(env.github_ref);
+    if (is_pull_request_event(ctx.event_name)) {
+      auto pr_number = parse_pr_number_from_event_path(env.event_path);
+      if (!pr_number) {
+        pr_number = parse_pr_number_from_ref(env.github_ref);
+      }
+      if (pr_number) {
+        ctx.pr_number = *pr_number;
+      }
     }
+  }
+
+  void prepare_reporting_context(runtime_context &ctx) {
+    if (!is_pull_request_event(ctx.event_name)) {
+      if (ctx.enable_comment_on_issue || ctx.enable_pull_request_review) {
+        auto note =
+          fmt::format("GitHub API reporting skipped because event '{}' is not a pull request",
+                      ctx.event_name);
+        spdlog::info("{}", note);
+        ctx.report_notes.push_back(note);
+      }
+      ctx.enable_comment_on_issue    = false;
+      ctx.enable_pull_request_review = false;
+      return;
+    }
+
+    const auto needs_github_api = ctx.enable_comment_on_issue || ctx.enable_pull_request_review;
+    if (!needs_github_api) {
+      return;
+    }
+
+    throw_if(ctx.repo_pair.empty(),
+             "empty git repository, check env: GITHUB_REPOSITORY");
+    throw_if(ctx.token.empty(), "empty token, check env: GITHUB_TOKEN");
+    throw_if(ctx.pr_number == -1,
+             "cannot determine pull request number from GITHUB_EVENT_PATH or GITHUB_REF");
   }
 
 } // namespace lint::github

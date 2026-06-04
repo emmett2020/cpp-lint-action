@@ -16,6 +16,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <string_view>
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
@@ -104,11 +105,17 @@ namespace lint::github {
     std::string head_ref;
     std::string github_ref;
     std::string github_ref_type;
+    std::string event_path;
   };
+
+  [[nodiscard]] auto is_pull_request_event(std::string_view event_name) -> bool;
 
   /// Read Github environment variables.
   auto read_env() -> github_env;
 
   /// Fill runtime context by Github environment variables.
   void fill_context(const github_env &env, runtime_context &ctx);
+
+  /// Disable impossible GitHub report outputs and validate required API data.
+  void prepare_reporting_context(runtime_context &ctx);
 } // namespace lint::github

@@ -15,6 +15,9 @@
  */
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include <range/v3/all.hpp>
 
 /// Implement some lower standard version APIs which have adopted into higher cpp-standards.
@@ -35,5 +38,4 @@
 inline auto concat(const std::vector<std::string> &strs, char delim = '\n') -> std::string {
   return ranges::views::join(strs, delim) | ranges::to<std::string>();
 }
-
 

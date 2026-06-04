@@ -50,6 +50,8 @@ namespace lint {
     spdlog::debug("enable pull request review: {}", ctx.enable_pull_request_review);
     spdlog::debug("enable action output: {}", ctx.enable_action_output);
     spdlog::debug("disable errors: {}", ctx.disable_errors);
+    spdlog::debug("jobs: {}", ctx.jobs);
+    spdlog::debug("max review comments: {}", ctx.max_review_comments);
     spdlog::debug("repository path: {}", ctx.repo_path);
     spdlog::debug("repository: {}", ctx.repo_pair);
     spdlog::debug("repository token: {}", ctx.token.empty() ? "" : "***");
@@ -62,6 +64,9 @@ namespace lint {
     spdlog::debug("{} changed files:", ctx.changed_files.size());
     for (const auto &file: ctx.changed_files) {
       spdlog::debug("{}", file);
+    }
+    for (const auto &note: ctx.report_notes) {
+      spdlog::debug("report note: {}", note);
     }
     spdlog::debug("");
   }

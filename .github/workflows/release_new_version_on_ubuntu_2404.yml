@@ -86,12 +86,18 @@ jobs:
 
           # rename
           mv build/${package_name}.tar.gz build/${artifact_name}.tar.gz
+          (
+            cd build
+            sha256sum "${artifact_name}.tar.gz" > "${artifact_name}.tar.gz.sha256"
+          )
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.artifact.outputs.artifact_name }}.tar.gz"
-          path: build/${{ steps.artifact.outputs.artifact_name }}.tar.gz
+          path: |
+            build/${{ steps.artifact.outputs.artifact_name }}.tar.gz
+            build/${{ steps.artifact.outputs.artifact_name }}.tar.gz.sha256
           if-no-files-found: error
 
   run-regression-tests:
@@ -108,4 +114,3 @@ jobs:
       artifact-name: "${{ needs.build-unit-tests-package.outputs.artifact_name }}.tar.gz"
       distribution-name: "${{ needs.build-unit-tests-package.outputs.distribution_name }}.tar.gz"
       release-version: "${{ needs.build-unit-tests-package.outputs.release_version }}"
-

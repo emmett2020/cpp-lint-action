@@ -35,6 +35,8 @@ namespace lint::program_options {
     constexpr auto enable_pull_request_review = "enable-pull-request-review";
     constexpr auto enable_action_output       = "enable-action-output";
     constexpr auto disable_errors             = "disable-errors";
+    constexpr auto jobs                       = "jobs";
+    constexpr auto max_review_comments        = "max-review-comments";
   } // namespace
 
   using std::string;
@@ -45,6 +47,10 @@ namespace lint::program_options {
 
     const auto *level    = value<string>()->value_name("level")->default_value("info");
     const auto *revision = value<string>()->value_name("revision");
+    const auto *jobs_value =
+      value<std::size_t>()->value_name("number")->default_value(1);
+    const auto *max_review_comments_value =
+      value<std::size_t>()->value_name("number")->default_value(50);
 
     auto boolean = [](bool def) {
       return value<bool>()->value_name("bool")->default_value(def);
@@ -63,6 +69,9 @@ namespace lint::program_options {
       (enable_step_summary,         boolean(true),   "Whether enable write step summary to Github action")
       (enable_action_output,        boolean(true),   "Whether enable write output to Github action")
       (disable_errors,              boolean(false),  "Whether disable errors.")
+      (jobs,                        jobs_value,      "How many files each tool can check in parallel")
+      (max_review_comments,         max_review_comments_value,
+                                                     "Maximum pull request review comments to create")
     ;
     // clang-format on
 
@@ -130,6 +139,13 @@ namespace lint::program_options {
     }
     if (variables.contains(disable_errors)) {
       ctx.disable_errors = variables[disable_errors].as<bool>();
+    }
+    if (variables.contains(jobs)) {
+      ctx.jobs = variables[jobs].as<std::size_t>();
+      throw_if(ctx.jobs == 0, "jobs must be greater than 0");
+    }
+    if (variables.contains(max_review_comments)) {
+      ctx.max_review_comments = variables[max_review_comments].as<std::size_t>();
     }
   }
 

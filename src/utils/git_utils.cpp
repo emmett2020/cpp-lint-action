@@ -974,7 +974,7 @@ namespace lint::git {
     }
 
     bool is_row_in_hunk(const git_diff_hunk &hunk, int row_number) noexcept {
-      return row_number >= hunk.new_start && row_number <= hunk.new_start + hunk.new_lines;
+      return row_number >= hunk.new_start && row_number < hunk.new_start + hunk.new_lines;
     }
   } // namespace hunk
 

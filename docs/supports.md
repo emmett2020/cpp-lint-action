@@ -1,7 +1,10 @@
 # clang-tidy & clang-format
 
+The default clang tool major version is `22`.
+
 | version | Ubuntu | MacOS | Windows |
 | ------- | ------ | ----- | ------- |
+| 22.x    |  ✅    |  ❌   |   ❌    |
 | 18.1.3  |  ✅    |  ❌   |   ❌    |
 | 17.0.6  |  ✅    |  ❌   |   ❌    |
 | 16.0.6  |  ✅    |  ❌   |   ❌    |
@@ -15,4 +18,3 @@
 ✅ : pass
 ❌ : unsupported
 ❓ : unvalidated
-
