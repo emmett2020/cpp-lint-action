@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <git2/diff.h>
@@ -23,6 +24,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <spdlog/spdlog.h>
 
+#include "context.h"
 #include "test_common.h"
 #include "utils/git_utils.h"
 
@@ -32,6 +34,17 @@ using namespace std::string_view_literals;
 
 const auto default_branch = "master"s;
 
+namespace {
+  auto clean_commit_id(std::string id) -> std::string {
+    id.erase(std::find(id.begin(), id.end(), '\0'), id.end());
+    return id;
+  }
+
+  auto commit_changes(repo_t &repo) -> std::string {
+    return clean_commit_id(repo.commit_changes());
+  }
+} // namespace
+
 TEST_CASE("Create repo should work", "[cpp-lint-action][git2][repo]") {
   create_temp_repo_dir();
   auto guard = scope_guard{remove_temp_repo_dir};
@@ -39,7 +52,8 @@ TEST_CASE("Create repo should work", "[cpp-lint-action][git2][repo]") {
   auto repo = git::repo::init(get_temp_repo_dir(), false);
   REQUIRE(git::repo::is_empty(*repo));
   auto temp_repo_dir_with_git = get_temp_repo_dir() / ".git/";
-  REQUIRE(git::repo::path(*repo) == temp_repo_dir_with_git);
+  REQUIRE(std::filesystem::weakly_canonical(git::repo::path(*repo))
+          == std::filesystem::weakly_canonical(temp_repo_dir_with_git));
 }
 
 TEST_CASE("Set config should work", "[cpp-lint-action][git2][config]") {
@@ -215,6 +229,41 @@ TEST_CASE("Push two commits and get diff files", "[cpp-lint-action][git2][diff]"
   REQUIRE(changed_files.size() == 1);
 }
 
+TEST_CASE("Runtime git context tracks added modified deleted and renamed paths",
+          "[cpp-lint-action][git2][diff][context]") {
+  auto repo = repo_t{};
+
+  repo.add_file("modified.cpp", "int old_value = 0;\n");
+  repo.add_file("deleted.cpp", "int removed_value = 0;\n");
+  repo.add_file("renamed_old.cpp", "int renamed_value = 0;\n");
+  auto target = commit_changes(repo);
+
+  repo.rewrite_file("modified.cpp", "int new_value = 1;\n");
+  repo.remove_file("deleted.cpp");
+  repo.remove_file("renamed_old.cpp");
+  repo.add_file("renamed_new.cpp", "int renamed_value = 0;\n");
+  repo.add_file("added.cpp", "int added_value = 0;\n");
+  auto source = commit_changes(repo);
+
+  auto context      = runtime_context{};
+  context.repo_path = repo.get_path();
+  context.target    = target;
+  context.source    = source;
+  fill_git_info(context);
+
+  REQUIRE(ranges::contains(context.changed_files, "modified.cpp"));
+  REQUIRE(ranges::contains(context.changed_files, "deleted.cpp"));
+  REQUIRE(ranges::contains(context.changed_files, "renamed_old.cpp"));
+  REQUIRE(ranges::contains(context.changed_files, "renamed_new.cpp"));
+  REQUIRE(ranges::contains(context.changed_files, "added.cpp"));
+
+  REQUIRE(context.deltas.at("modified.cpp").status == GIT_DELTA_MODIFIED);
+  REQUIRE(context.deltas.at("deleted.cpp").status == GIT_DELTA_DELETED);
+  REQUIRE(context.deltas.at("renamed_old.cpp").status == GIT_DELTA_DELETED);
+  REQUIRE(context.deltas.at("renamed_new.cpp").status == GIT_DELTA_ADDED);
+  REQUIRE(context.deltas.at("added.cpp").status == GIT_DELTA_ADDED);
+}
+
 TEST_CASE("Simple use of patch ", "[cpp-lint-action][git2][patch]") {
   create_temp_repo_dir();
   auto guard = scope_guard{remove_temp_repo_dir};
@@ -283,6 +332,13 @@ TEST_CASE("Get lines in a hunk", "[cpp-lint-action][git2][patch]") {
 
   auto diff     = git::diff::commit_to_commit(*repo, *commit1, *commit2);
   auto patch    = git::patch::create_from_diff(*diff, 0);
+  auto [hunk, num_lines] = git::patch::get_hunk(*patch, 0);
+  REQUIRE(num_lines > 0);
+  REQUIRE(hunk.new_lines > 0);
+  REQUIRE(git::hunk::is_row_in_hunk(hunk, hunk.new_start));
+  REQUIRE(git::hunk::is_row_in_hunk(hunk, hunk.new_start + hunk.new_lines - 1));
+  REQUIRE_FALSE(git::hunk::is_row_in_hunk(hunk, hunk.new_start + hunk.new_lines));
+
   auto contents = git::patch::get_lines_in_hunk(*patch, 0);
   REQUIRE(contents[0] == "hello world\n");
   REQUIRE(contents[1] == "hello world2\n");

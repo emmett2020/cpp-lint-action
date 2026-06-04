@@ -66,7 +66,7 @@ echo "4. Start to compress"
 # ------- lib/
 cp ${CUR_SCRIPT_DIR}/install.sh ${PACKAGE_NAME}
 cp ${CUR_SCRIPT_DIR}/uninstall.sh ${PACKAGE_NAME}
-tar -cvf ${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}
+tar -czf "${PACKAGE_NAME}.tar.gz" "${PACKAGE_NAME}"
 
 popd &> /dev/null
 echo "Successfully packaged ${BINARY_NAME} and it's dependencies into ${PACKAGE_NAME}"

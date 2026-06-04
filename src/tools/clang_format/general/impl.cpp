@@ -15,11 +15,17 @@
  */
 #include "tools/clang_format/general/impl.h"
 
+#include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdint>
+#include <exception>
 #include <fstream>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include <boost/regex.hpp>
@@ -173,8 +179,12 @@ namespace lint::tool::clang_format {
     assert(!option.binary.empty() && "clang-format binary is empty");
     assert(!context.repo_path.empty() && "the repo_path of context is empty");
 
+    result              = result_t{};
     const auto root_dir = context.repo_path;
-    const auto files    = context.changed_files;
+    auto files          = context.changed_files;
+    std::sort(files.begin(), files.end());
+
+    auto files_to_check = std::vector<std::string>{};
     for (const auto &file: files) {
       const auto &delta = context.deltas.at(file);
       if (delta.status == GIT_DELTA_DELETED) {
@@ -186,24 +196,86 @@ namespace lint::tool::clang_format {
         continue;
       }
 
-      auto per_file_result = check_single_file(context, root_dir, file);
+      files_to_check.push_back(file);
+    }
+
+    auto merge_result = [&](const std::string &file, per_file_result per_file_result) {
       if (per_file_result.passed) {
         spdlog::info("file: {} passes {} check.", file, option.binary);
         result.passes[file] = std::move(per_file_result);
-        continue;
+        return true;
       }
 
       spdlog::error("file: {} doesn't pass {} check.", file, option.binary);
       result.failed_commands.emplace_back(
         fmt::format("clang-format {}", per_file_result.file_option));
       result.fails[file] = std::move(per_file_result);
+      return false;
+    };
 
-      if (option.enabled_fastly_exit) {
-        spdlog::info("{} fastly exit since check failed", option.binary);
-        result.final_passed  = false;
-        result.fastly_exited = true;
-        return;
+    if (option.enabled_fastly_exit || context.jobs == 1) {
+      for (const auto &file: files_to_check) {
+        auto per_file_result = check_single_file(context, root_dir, file);
+        if (merge_result(file, std::move(per_file_result))) {
+          continue;
+        }
+
+        if (option.enabled_fastly_exit) {
+          spdlog::info("{} fastly exit since check failed", option.binary);
+          result.final_passed  = false;
+          result.fastly_exited = true;
+          return;
+        }
       }
+
+      result.final_passed = result.fails.empty();
+      return;
+    }
+
+    if (files_to_check.empty()) {
+      result.final_passed = true;
+      return;
+    }
+
+    auto next_index   = std::atomic_size_t{0};
+    auto first_error  = std::exception_ptr{};
+    auto error_mutex  = std::mutex{};
+    auto file_results = std::vector<std::optional<per_file_result>>(files_to_check.size());
+    auto worker_count = std::min(context.jobs, files_to_check.size());
+    auto workers      = std::vector<std::thread>{};
+    workers.reserve(worker_count);
+
+    for (std::size_t worker_idx = 0; worker_idx < worker_count; ++worker_idx) {
+      workers.emplace_back([&] {
+        while (true) {
+          const auto index = next_index.fetch_add(1);
+          if (index >= files_to_check.size()) {
+            break;
+          }
+
+          try {
+            file_results[index] = check_single_file(context, root_dir, files_to_check[index]);
+          } catch (...) {
+            auto lock = std::lock_guard{error_mutex};
+            if (!first_error) {
+              first_error = std::current_exception();
+            }
+          }
+        }
+      });
+    }
+
+    for (auto &worker: workers) {
+      worker.join();
+    }
+
+    if (first_error) {
+      std::rethrow_exception(first_error);
+    }
+
+    for (std::size_t index = 0; index < files_to_check.size(); ++index) {
+      auto per_file_result = std::move(*file_results[index]);
+      merge_result(files_to_check[index], std::move(per_file_result));
     }
 
     result.final_passed = result.fails.empty();

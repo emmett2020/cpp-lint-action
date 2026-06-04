@@ -124,9 +124,7 @@ namespace lint::tool::clang_tidy {
       auto [ec, std_out, std_err] = shell::which(option.binary);
       throw_unless(ec == 0, fmt::format("Can't find given clang-tidy binary: {}", option.binary));
     } else {
-      auto [ec, std_out, std_err] = shell::which("clang-tidy");
-      throw_unless(ec == 0, "can't find clang-tidy");
-      option.binary = std_out;
+      option.binary = find_clang_tool("clang-tidy", default_clang_tool_version);
     }
 
     option.version = get_version(option.binary);

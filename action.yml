@@ -38,6 +38,14 @@ inputs:
       You can use this action's output to customize later behavior.
     type: boolean
     default: false
+  jobs:
+    description: How many files each enabled tool can check in parallel
+    type: string
+    default: "1"
+  max-review-comments:
+    description: Maximum pull request review comments to create
+    type: string
+    default: "50"
 
   enable-clang-format:
     description: Enable clang-format check
@@ -57,6 +65,7 @@ inputs:
       to avoid ambigous. And the clang-format-${version} must
       exist in your $PATH
     type: string
+    default: "22"
   clang-format-binary:
     description: |
       Set the full path of clang-format executable binary.
@@ -85,6 +94,7 @@ inputs:
       to avoid ambigous. And the clang-tidy-${version} must
       exist in your $PATH
     type: string
+    default: "22"
   clang-tidy-binary:
     description: |
       Set the full path of clang-tidy executable binary.
@@ -135,15 +145,50 @@ runs:
     - name: Install dependencies on Linux
       if: runner.os == 'Linux'
       shell: bash
+      env:
+        INPUT_CLANG_FORMAT_VERSION: ${{ inputs.clang-format-version }}
+        INPUT_CLANG_TIDY_VERSION: ${{ inputs.clang-tidy-version }}
+        INPUT_CLANG_FORMAT_BINARY: ${{ inputs.clang-format-binary }}
+        INPUT_CLANG_TIDY_BINARY: ${{ inputs.clang-tidy-binary }}
       run: |
         set -euo pipefail
+        default_clang_tool_version="22"
+
+        clang_format_version="${INPUT_CLANG_FORMAT_VERSION}"
+        clang_tidy_version="${INPUT_CLANG_TIDY_VERSION}"
+        : "${clang_format_version:=${default_clang_tool_version}}"
+        : "${clang_tidy_version:=${default_clang_tool_version}}"
+
+        clang_tool_packages=()
+        if [[ -z "${INPUT_CLANG_FORMAT_BINARY}"                               \
+              && "${clang_format_version}" == "${default_clang_tool_version}" ]]; then
+          if ! command -v "clang-format-${default_clang_tool_version}" >/dev/null 2>&1; then
+            clang_tool_packages+=("clang-format-${default_clang_tool_version}")
+          fi
+        fi
+        if [[ -z "${INPUT_CLANG_TIDY_BINARY}"                               \
+              && "${clang_tidy_version}" == "${default_clang_tool_version}" ]]; then
+          if ! command -v "clang-tidy-${default_clang_tool_version}" >/dev/null 2>&1; then
+            clang_tool_packages+=("clang-tidy-${default_clang_tool_version}")
+          fi
+        fi
+
+        if (( ${#clang_tool_packages[@]} > 0 )); then
+          "${GITHUB_ACTION_PATH}/scripts/linux/ubuntu/install_llvm_tools.sh" \
+            "${default_clang_tool_version}"                                  \
+            "${clang_tool_packages[@]}"
+        fi
+
         version_file="${GITHUB_ACTION_PATH}/VERSION"
-        release_version=$(cat ${version_file} | sed '/^$/d' | sed 's/[[:space:]]*$//')
-        release_version_str=$(echo ${release_version} | tr '.' '_')
-        echo "Current path: `pwd`, current version: ${release_version}"
-        wget -q "https://github.com/emmett2020/cpp-lint-action/releases/download/v${release_version}/cpp_lint_action_${release_version_str}_ubuntu_24_04_${{ runner.arch }}.tar.gz" \
-             -O cpp-lint-action.tar.gz
-        tar -xf cpp-lint-action.tar.gz
+        release_version=$(sed '/^$/d' "${version_file}" | sed 's/[[:space:]]*$//')
+        release_version_str=$(echo "${release_version}" | tr '.' '_')
+        archive_name="cpp_lint_action_${release_version_str}_ubuntu_24_04_${{ runner.arch }}.tar.gz"
+        release_url="https://github.com/emmett2020/cpp-lint-action/releases/download/v${release_version}"
+        echo "Current path: $(pwd), current version: ${release_version}"
+        wget -q "${release_url}/${archive_name}" -O "${archive_name}"
+        wget -q "${release_url}/${archive_name}.sha256" -O "${archive_name}.sha256"
+        sha256sum -c "${archive_name}.sha256"
+        tar -xf "${archive_name}"
         cd cpp_lint_action && ls -lrth && ./install.sh
 
 
@@ -151,16 +196,44 @@ runs:
       id: on_linux
       if: runner.os == 'Linux'
       shell: bash
+      env:
+        INPUT_LOG_LEVEL: ${{ inputs.log-level }}
+        INPUT_TARGET_REVISION: ${{ inputs.target-revision }}
+        INPUT_ENABLE_COMMENT_ON_ISSUE: ${{ inputs.enable-comment-on-issue }}
+        INPUT_ENABLE_PULL_REQUEST_REVIEW: ${{ inputs.enable-pull-request-review }}
+        INPUT_ENABLE_STEP_SUMMARY: ${{ inputs.enable-step-summary }}
+        INPUT_ENABLE_ACTION_OUTPUT: ${{ inputs.enable-action-output }}
+        INPUT_DISABLE_ERRORS: ${{ inputs.disable-errors }}
+        INPUT_JOBS: ${{ inputs.jobs }}
+        INPUT_MAX_REVIEW_COMMENTS: ${{ inputs.max-review-comments }}
+        INPUT_ENABLE_CLANG_FORMAT: ${{ inputs.enable-clang-format }}
+        INPUT_ENABLE_CLANG_FORMAT_FASTLY_EXIT: ${{ inputs.enable-clang-format-fastly-exit }}
+        INPUT_CLANG_FORMAT_VERSION: ${{ inputs.clang-format-version }}
+        INPUT_CLANG_FORMAT_BINARY: ${{ inputs.clang-format-binary }}
+        INPUT_CLANG_FORMAT_FILE_IREGEX: ${{ inputs.clang-format-file-iregex }}
+        INPUT_ENABLE_CLANG_TIDY: ${{ inputs.enable-clang-tidy }}
+        INPUT_ENABLE_CLANG_TIDY_FASTLY_EXIT: ${{ inputs.enable-clang-tidy-fastly-exit }}
+        INPUT_CLANG_TIDY_VERSION: ${{ inputs.clang-tidy-version }}
+        INPUT_CLANG_TIDY_BINARY: ${{ inputs.clang-tidy-binary }}
+        INPUT_CLANG_TIDY_FILE_IREGEX: ${{ inputs.clang-tidy-file-iregex }}
+        INPUT_CLANG_TIDY_DATABASE: ${{ inputs.clang-tidy-database }}
+        INPUT_CLANG_TIDY_ALLOW_NO_CHECKS: ${{ inputs.clang-tidy-allow-no-checks }}
+        INPUT_CLANG_TIDY_ENABLE_CHECK_PROFILE: ${{ inputs.clang-tidy-enable-check-profile }}
+        INPUT_CLANG_TIDY_CHECKS: ${{ inputs.clang-tidy-checks }}
+        INPUT_CLANG_TIDY_CONFIG: ${{ inputs.clang-tidy-config }}
+        INPUT_CLANG_TIDY_CONFIG_FILE: ${{ inputs.clang-tidy-config-file }}
+        INPUT_CLANG_TIDY_HEADER_FILTER: ${{ inputs.clang-tidy-header-filter }}
+        INPUT_CLANG_TIDY_LINE_FILTER: ${{ inputs.clang-tidy-line-filter }}
       run: |
         echo "::group::Adjust repository"
         set -euo pipefail
 
-        if [[ "${{ env.DEBUG_CPP_LINT_ACTION }}" = "true"  ]]; then
+        if [[ "${DEBUG_CPP_LINT_ACTION:-}" = "true"  ]]; then
           # Debugging mode may not have remote repository.
           echo "Enabled debugging mode"
-          default_branch="${{ inputs.target-revision }}"
+          default_branch="${INPUT_TARGET_REVISION}"
         else
-          repo_full_path="${{ env.GITHUB_WORKSPACE }}"
+          repo_full_path="${GITHUB_WORKSPACE}"
           echo "Full path of testing repository: ${repo_full_path}"
           pushd "${repo_full_path}"
 
@@ -168,8 +241,8 @@ runs:
           echo "Current branch of testing repository: ${current_branch}"
 
           default_branch=""
-          if [ -n "${{ inputs.target-revision }}" ]; then
-            default_branch="${{ inputs.target-revision }}"
+          if [[ -n "${INPUT_TARGET_REVISION}" ]]; then
+            default_branch="${INPUT_TARGET_REVISION}"
           else
             git fetch origin
             default_branch=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
@@ -185,61 +258,63 @@ runs:
 
         echo "::endgroup::"
 
-        options=" "
-        options="${options} --target-revision=${default_branch}"
+        default_clang_tool_version="22"
+        clang_format_version="${INPUT_CLANG_FORMAT_VERSION}"
+        clang_tidy_version="${INPUT_CLANG_TIDY_VERSION}"
+        : "${clang_format_version:=${default_clang_tool_version}}"
+        : "${clang_tidy_version:=${default_clang_tool_version}}"
 
-        if [ -n "${{ inputs.clang-format-version }}" ]; then
-          options="${options} --clang-format-version=${{ inputs.clang-format-version }}"
+        args=(
+          "--log-level=${INPUT_LOG_LEVEL}"
+          "--target-revision=${default_branch}"
+          "--enable-comment-on-issue=${INPUT_ENABLE_COMMENT_ON_ISSUE}"
+          "--enable-pull-request-review=${INPUT_ENABLE_PULL_REQUEST_REVIEW}"
+          "--enable-step-summary=${INPUT_ENABLE_STEP_SUMMARY}"
+          "--enable-action-output=${INPUT_ENABLE_ACTION_OUTPUT}"
+          "--disable-errors=${INPUT_DISABLE_ERRORS}"
+          "--jobs=${INPUT_JOBS}"
+          "--max-review-comments=${INPUT_MAX_REVIEW_COMMENTS}"
+          "--enable-clang-format=${INPUT_ENABLE_CLANG_FORMAT}"
+          "--enable-clang-format-fastly-exit=${INPUT_ENABLE_CLANG_FORMAT_FASTLY_EXIT}"
+          "--enable-clang-tidy=${INPUT_ENABLE_CLANG_TIDY}"
+          "--enable-clang-tidy-fastly-exit=${INPUT_ENABLE_CLANG_TIDY_FASTLY_EXIT}"
+          "--clang-tidy-enable-check-profile=${INPUT_CLANG_TIDY_ENABLE_CHECK_PROFILE}"
+          "--clang-tidy-allow-no-checks=${INPUT_CLANG_TIDY_ALLOW_NO_CHECKS}"
+        )
+
+        if [[ -n "${INPUT_CLANG_FORMAT_BINARY}" ]]; then
+          args+=("--clang-format-binary=${INPUT_CLANG_FORMAT_BINARY}")
+        elif [[ -n "${clang_format_version}" ]]; then
+          args+=("--clang-format-version=${clang_format_version}")
         fi
-        if [ -n "${{ inputs.clang-format-binary }}" ]; then
-          options="${options} --clang-format-binary=${{ inputs.clang-format-binary }}"
+        if [[ -n "${INPUT_CLANG_FORMAT_FILE_IREGEX}" ]]; then
+          args+=("--clang-format-file-iregex=${INPUT_CLANG_FORMAT_FILE_IREGEX}")
         fi
-        if [ -n "${{ inputs.clang-format-file-iregex }}" ]; then
-          options="${options} --clang-format-file-iregex=${{ inputs.clang-format-file-iregex }}"
+        if [[ -n "${INPUT_CLANG_TIDY_BINARY}" ]]; then
+          args+=("--clang-tidy-binary=${INPUT_CLANG_TIDY_BINARY}")
+        elif [[ -n "${clang_tidy_version}" ]]; then
+          args+=("--clang-tidy-version=${clang_tidy_version}")
         fi
-        if [ -n "${{ inputs.clang-tidy-version }}" ]; then
-          options="${options} --clang-tidy-version=${{ inputs.clang-tidy-version }}"
+        if [[ -n "${INPUT_CLANG_TIDY_FILE_IREGEX}" ]]; then
+          args+=("--clang-tidy-file-iregex=${INPUT_CLANG_TIDY_FILE_IREGEX}")
         fi
-        if [ -n "${{ inputs.clang-tidy-binary }}" ]; then
-          options="${options} --clang-tidy-binary=${{ inputs.clang-tidy-binary }}"
+        if [[ -n "${INPUT_CLANG_TIDY_DATABASE}" ]]; then
+          args+=("--clang-tidy-database=${INPUT_CLANG_TIDY_DATABASE}")
         fi
-        if [ -n "${{ inputs.clang-tidy-file-iregex }}" ]; then
-          options="${options} --clang-tidy-file-iregex=${{ inputs.clang-tidy-file-iregex }}"
+        if [[ -n "${INPUT_CLANG_TIDY_CHECKS}" ]]; then
+          args+=("--clang-tidy-checks=${INPUT_CLANG_TIDY_CHECKS}")
         fi
-        if [ -n "${{ inputs.clang-tidy-database }}" ]; then
-          options="${options} --clang-tidy-database=${{ inputs.clang-tidy-database }}"
+        if [[ -n "${INPUT_CLANG_TIDY_CONFIG}" ]]; then
+          args+=("--clang-tidy-config=${INPUT_CLANG_TIDY_CONFIG}")
         fi
-        if [ -n "${{ inputs.clang-tidy-checks }}" ]; then
-          options="${options} --clang-tidy-checks=${{ inputs.clang-tidy-checks }}"
+        if [[ -n "${INPUT_CLANG_TIDY_CONFIG_FILE}" ]]; then
+          args+=("--clang-tidy-config-file=${INPUT_CLANG_TIDY_CONFIG_FILE}")
         fi
-        if [ -n "${{ inputs.clang-tidy-config }}" ]; then
-          options="${options} --clang-tidy-config=${{ inputs.clang-tidy-config }}"
+        if [[ -n "${INPUT_CLANG_TIDY_HEADER_FILTER}" ]]; then
+          args+=("--clang-tidy-header-filter=${INPUT_CLANG_TIDY_HEADER_FILTER}")
         fi
-        if [ -n "${{ inputs.clang-tidy-config-file }}" ]; then
-          options="${options} --clang-tidy-config-file=${{ inputs.clang-tidy-config-file }}"
-        fi
-        if [ -n "${{ inputs.clang-tidy-header-filter }}" ]; then
-          options="${options} --clang-tidy-header-filter=${{ inputs.clang-tidy-header-filter }}"
-        fi
-        if [ -n "${{ inputs.clang-tidy-line-filter }}" ]; then
-          options="${options} --clang-tidy-line-filter=${{ inputs.clang-tidy-line-filter }}"
+        if [[ -n "${INPUT_CLANG_TIDY_LINE_FILTER}" ]]; then
+          args+=("--clang-tidy-line-filter=${INPUT_CLANG_TIDY_LINE_FILTER}")
         fi
 
-        /usr/local/bin/cpp-lint-action                                                        \
-           --log-level="${{ inputs.log-level }}"                                              \
-           --enable-comment-on-issue="${{ inputs.enable-comment-on-issue }}"                  \
-           --enable-pull-request-review="${{ inputs.enable-pull-request-review }}"            \
-           --enable-step-summary="${{ inputs.enable-step-summary }}"                          \
-           --enable-action-output="${{ inputs.enable-action-output }}"                        \
-           --disable-errors="${{ inputs.disable-errors }}"                                    \
-           --enable-clang-format="${{ inputs.enable-clang-format }}"                          \
-           --enable-clang-format-fastly-exit="${{ inputs.enable-clang-format-fastly-exit }}"  \
-           --enable-clang-tidy="${{ inputs.enable-clang-tidy }}"                              \
-           --enable-clang-tidy-fastly-exit="${{ inputs.enable-clang-tidy-fastly-exit }}"      \
-           --clang-tidy-enable-check-profile="${{ inputs.clang-tidy-enable-check-profile }}"  \
-           --clang-tidy-allow-no-checks="${{ inputs.clang-tidy-allow-no-checks }}"            \
-           ${options}
-
-        exit $?
-
-
+        /usr/local/bin/cpp-lint-action "${args[@]}"

@@ -17,6 +17,7 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          - { platform: "Ubuntu-24.04", clang_tool_version: "22" }
           - { platform: "Ubuntu-24.04", clang_tool_version: "18" }
           - { platform: "Ubuntu-24.04", clang_tool_version: "17" }
           - { platform: "Ubuntu-24.04", clang_tool_version: "16" }
@@ -32,6 +33,12 @@ jobs:
  
       - name: Make Test Repository
         run: bash ./.github/workflows/scripts/basic_regression_test.sh
+
+      - name: Install LLVM 22 Tools
+        if: matrix.clang_tool_version == '22'
+        run: |
+          set -euo pipefail
+          bash scripts/linux/ubuntu/install_llvm_tools.sh 22 clang-format-22 clang-tidy-22
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -84,4 +91,3 @@ jobs:
           [[ "${format_failed}" -ne 1 ]] && exit 1
           [[ "${tidy_failed}" -ne 1 ]]   && exit 1
           exit 0
-

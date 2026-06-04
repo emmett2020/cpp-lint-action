@@ -19,6 +19,7 @@
 #include <git2/repository.h>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "utils/git_utils.h"
 
@@ -31,6 +32,9 @@ namespace lint {
     bool enable_pull_request_review = false;
     bool enable_action_output       = false;
     bool disable_errors             = false;
+    std::size_t jobs                = 1;
+    std::size_t max_review_comments = 50;
+    std::vector<std::string> report_notes;
 
     // Theses will be filled by [ github::fill_context() ]
     std::string repo_path;

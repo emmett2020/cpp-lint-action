@@ -17,12 +17,15 @@
 
 #include <spdlog/spdlog.h>
 #include <string>
+#include <string_view>
 
 #include "utils/common.h"
 #include "utils/error.h"
 #include "utils/shell.h"
 
 namespace lint::tool {
+  inline constexpr auto default_clang_tool_version = std::string_view{"22"};
+
   // Find the full executable path of clang tools with specific version.
   inline auto find_clang_tool(std::string_view tool, std::string_view version) -> std::string {
     auto command                = fmt::format("{}-{}", tool, version);

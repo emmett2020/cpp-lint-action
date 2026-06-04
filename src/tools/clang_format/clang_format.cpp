@@ -108,9 +108,7 @@ namespace lint::tool::clang_format {
       auto [ec, std_out, std_err] = shell::which(option.binary);
       throw_unless(ec == 0, fmt::format("Can't find given clang-format binary: {}", option.binary));
     } else {
-      auto [ec, std_out, std_err] = shell::which("clang-format");
-      throw_unless(ec == 0, "can't find clang-format");
-      option.binary = std_out;
+      option.binary = find_clang_tool("clang-format", default_clang_tool_version);
     }
 
     option.version = get_version(option.binary);

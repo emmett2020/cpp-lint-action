@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 #include <cctype>
+#include <exception>
 #include <memory>
 #include <string>
 #include <vector>
@@ -105,68 +106,94 @@ namespace {
     }
   }
 
+  struct git_runtime_guard {
+    git_runtime_guard() {
+      git::setup();
+    }
+
+    ~git_runtime_guard() {
+      git::shutdown();
+    }
+
+    git_runtime_guard(const git_runtime_guard &)            = delete;
+    git_runtime_guard &operator=(const git_runtime_guard &) = delete;
+  };
+
+  auto run_application(int argc, char **argv) -> int {
+    auto tool_creators = collect_tool_creators();
+
+    // Handle program options.
+    auto desc = program_options::create_desc();
+    tool::register_tool_options(tool_creators, desc);
+    auto user_options = program_options::parse(argc, argv, desc);
+    if (user_options.contains("help")) {
+      std::cout << desc << "\n";
+      return 0;
+    }
+    if (user_options.contains("version")) {
+      print_version();
+      return 0;
+    }
+    set_log(user_options);
+
+    auto tools = tool::create_enabled_tools(tool_creators, user_options);
+    print_tools_info(tools);
+
+    // Create runtime context.
+    auto context = runtime_context{};
+
+    // Fill runtime context by program options.
+    program_options::fill_context(user_options, context);
+
+    // Fill runtime context by environment variables.
+    auto env = github::read_env();
+    github::fill_context(env, context);
+    github::prepare_reporting_context(context);
+
+    // Fill runtime context by git repositofy informations.
+    auto git_guard = git_runtime_guard{};
+    fill_git_info(context);
+
+    print_context(context);
+    check_repo_is_on_source(context);
+
+    // Run tools within the given context and get reporters.
+    auto reporters = tool::run_tools(tools, context);
+    print_brief_result(reporters, context.changed_files.size());
+
+    auto review_comments = github::review_comments{};
+    if (context.enable_pull_request_review) {
+      review_comments = tool::collect_pull_request_review_comments(context, reporters);
+    }
+
+    if (context.enable_action_output) {
+      write_to_github_action_output(context, reporters);
+    }
+    if (context.enable_step_summary) {
+      write_to_github_step_summary(context, reporters);
+    }
+    if (context.enable_comment_on_issue) {
+      comment_on_github_issue(context, reporters);
+    }
+    if (context.enable_pull_request_review) {
+      tool::comment_on_github_pull_request_review(context, review_comments);
+    }
+
+    if (context.disable_errors) {
+      return 0;
+    }
+    return all_passed(reporters) ? 0 : 1;
+  }
 
 } // namespace
 
 auto main(int argc, char **argv) -> int {
-  auto tool_creators = collect_tool_creators();
-
-  // Handle program options.
-  auto desc = program_options::create_desc();
-  tool::register_tool_options(tool_creators, desc);
-  auto user_options = program_options::parse(argc, argv, desc);
-  if (user_options.contains("help")) {
-    std::cout << desc << "\n";
-    return 0;
+  try {
+    return run_application(argc, argv);
+  } catch (const std::exception &err) {
+    spdlog::error("cpp-lint-action failed: {}", err.what());
+  } catch (...) {
+    spdlog::error("cpp-lint-action failed with an unknown error");
   }
-  if (user_options.contains("version")) {
-    print_version();
-    return 0;
-  }
-  set_log(user_options);
-
-  auto tools = tool::create_enabled_tools(tool_creators, user_options);
-  print_tools_info(tools);
-
-  // Create runtime context.
-  auto context = runtime_context{};
-
-  // Fill runtime context by program options.
-  program_options::fill_context(user_options, context);
-
-  // Fill runtime context by environment variables.
-  auto env = github::read_env();
-  github::fill_context(env, context);
-
-  // Fill runtime context by git repositofy informations.
-  git::setup();
-  fill_git_info(context);
-
-  print_context(context);
-  check_repo_is_on_source(context);
-
-  // Run tools within the given context and get reporters.
-  auto reporters = tool::run_tools(tools, context);
-  print_brief_result(reporters, context.changed_files.size());
-
-  if (context.enable_action_output) {
-    write_to_github_action_output(context, reporters);
-  }
-  if (context.enable_step_summary) {
-    write_to_github_step_summary(context, reporters);
-  }
-  if (context.enable_comment_on_issue) {
-    comment_on_github_issue(context, reporters);
-  }
-  if (context.enable_pull_request_review) {
-    comment_on_github_pull_request_review(context, reporters);
-  }
-
-  git::shutdown();
-
-  if (context.disable_errors) {
-    return 0;
-  }
-  return all_passed(reporters) ? 0 : 1;
+  return 1;
 }
-

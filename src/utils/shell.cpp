@@ -19,19 +19,38 @@
 #include <string>
 #include <string_view>
 
-#define BOOST_PROCESS_V2_SEPARATE_COMPILATION
 #include <boost/asio/error.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/readable_pipe.hpp>
-#include <boost/process/v2.hpp>
-#include <boost/process/v2/src.hpp>
+#include <boost/process/v2/environment.hpp>
+#include <boost/process/v2/process.hpp>
 #include <boost/process/v2/start_dir.hpp>
+#include <boost/process/v2/stdio.hpp>
 
 #include "utils/error.h"
 #include "utils/common.h"
 
 namespace lint::shell {
   namespace bp = boost::process::v2;
+
+  namespace {
+    void read_pipe(boost::asio::readable_pipe &pipe,
+                   std::string &output,
+                   std::string_view stream_name,
+                   std::string_view command) {
+      auto ec = boost::system::error_code{};
+      do {
+        ec.clear();
+        boost::asio::read(pipe, boost::asio::dynamic_buffer(output), ec);
+      } while (ec == boost::asio::error::interrupted);
+
+      throw_if(ec && ec != boost::asio::error::eof,
+               fmt::format("Read {} message of {} failed since {}",
+                           stream_name,
+                           command,
+                           ec.message()));
+    }
+  } // namespace
 
   auto execute(std::string_view command, const options &opts) -> result {
     auto context = boost::asio::io_context{};
@@ -43,16 +62,9 @@ namespace lint::shell {
       command,
       opts,
       bp::process_stdio{.in = {}, .out = rp_out, .err = rp_err});
-    auto ec  = boost::system::error_code{};
     auto res = result{};
-    boost::asio::read(rp_out, boost::asio::dynamic_buffer(res.std_out), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stdout message of {} faild since {}", command, ec.message()));
-    ec.clear();
-
-    boost::asio::read(rp_err, boost::asio::dynamic_buffer(res.std_err), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stderr message of {} faild since {}", command, ec.message()));
+    read_pipe(rp_out, res.std_out, "stdout", command);
+    read_pipe(rp_err, res.std_err, "stderr", command);
 
     res.exit_code = proc.wait();
     return res;
@@ -70,16 +82,9 @@ namespace lint::shell {
       opts,
       bp::process_stdio{.in = {}, .out = rp_out, .err = rp_err},
       bp::process_start_dir{start_dir});
-    auto ec  = boost::system::error_code{};
     auto res = result{};
-    boost::asio::read(rp_out, boost::asio::dynamic_buffer(res.std_out), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stdout message of {} faild since {}", command, ec.message()));
-    ec.clear();
-
-    boost::asio::read(rp_err, boost::asio::dynamic_buffer(res.std_err), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stderr message of {} faild since {}", command, ec.message()));
+    read_pipe(rp_out, res.std_out, "stdout", command);
+    read_pipe(rp_err, res.std_err, "stderr", command);
 
     res.exit_code = proc.wait();
     return res;
@@ -96,16 +101,9 @@ namespace lint::shell {
       opts,
       bp::process_stdio{.in = {}, .out = rp_out, .err = rp_err},
       bp::process_environment{env});
-    auto ec  = boost::system::error_code{};
     auto res = result{};
-    boost::asio::read(rp_out, boost::asio::dynamic_buffer(res.std_out), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stdout message of {} faild since {}", command, ec.message()));
-    ec.clear();
-
-    boost::asio::read(rp_err, boost::asio::dynamic_buffer(res.std_err), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stderr message of {} faild since {}", command, ec.message()));
+    read_pipe(rp_out, res.std_out, "stdout", command);
+    read_pipe(rp_err, res.std_err, "stderr", command);
 
     res.exit_code = proc.wait();
     return res;
@@ -126,16 +124,9 @@ namespace lint::shell {
       bp::process_stdio{.in = {}, .out = rp_out, .err = rp_err},
       bp::process_environment{env},
       bp::process_start_dir(start_dir));
-    auto ec  = boost::system::error_code{};
     auto res = result{};
-    boost::asio::read(rp_out, boost::asio::dynamic_buffer(res.std_out), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stdout message of {} faild since {}", command, ec.message()));
-    ec.clear();
-
-    boost::asio::read(rp_err, boost::asio::dynamic_buffer(res.std_err), ec);
-    throw_if(ec && ec != boost::asio::error::eof,
-             fmt::format("Read stderr message of {} faild since {}", command, ec.message()));
+    read_pipe(rp_out, res.std_out, "stdout", command);
+    read_pipe(rp_err, res.std_err, "stderr", command);
 
     res.exit_code = proc.wait();
     return res;

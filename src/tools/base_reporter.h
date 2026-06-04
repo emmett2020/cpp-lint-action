@@ -56,7 +56,11 @@ namespace lint::tool {
   void comment_on_github_issue(const runtime_context &context,
                                const std::vector<reporter_base_ptr> &reporters);
 
+  auto collect_pull_request_review_comments(runtime_context &context,
+                                            const std::vector<reporter_base_ptr> &reporters)
+    -> github::review_comments;
+
   void comment_on_github_pull_request_review(const runtime_context &context,
-                                             const std::vector<reporter_base_ptr> &reporters);
+                                             const github::review_comments &comments);
 
 } // namespace lint::tool

@@ -22,6 +22,7 @@
 #include <spdlog/spdlog.h>
 
 #include "utils/error.h"
+#include "utils/std.h"
 
 namespace lint {
   constexpr auto trim_left(std::string_view str) -> std::string_view {

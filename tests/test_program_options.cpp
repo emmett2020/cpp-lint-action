@@ -16,6 +16,7 @@
 
 #include "github/common.h"
 #include "program_options.h"
+#include "tools/util.h"
 #include "utils/env_manager.h"
 
 #include <catch2/catch_all.hpp>
@@ -90,10 +91,10 @@ TEST_CASE("Test fill context by program options", "[cpp-lint-action][program_opt
   }
 
   SECTION("enable_comment_on_issue should be passed into context") {
-    auto opts         = make_opt("--target-revision=main", "--enable-step-summary=true");
+    auto opts         = make_opt("--target-revision=main", "--enable-comment-on-issue=false");
     auto user_options = parse(opts.size(), opts.data(), desc);
     REQUIRE_NOTHROW(fill_context(user_options, context));
-    REQUIRE(context.enable_step_summary == true);
+    REQUIRE(context.enable_comment_on_issue == false);
   }
 
   SECTION("enable_pull_request_review should be passed into context") {
@@ -111,5 +112,34 @@ TEST_CASE("Test fill context by program options", "[cpp-lint-action][program_opt
     REQUIRE(context.enable_comment_on_issue == true);
     REQUIRE(context.enable_pull_request_review == false);
     REQUIRE(context.enable_action_output == true);
+    REQUIRE(context.disable_errors == false);
+    REQUIRE(context.jobs == 1);
+    REQUIRE(context.max_review_comments == 50);
   }
+
+  SECTION("disable_errors should be passed into context") {
+    auto opts         = make_opt("--target-revision=main", "--disable-errors=true");
+    auto user_options = parse(opts.size(), opts.data(), desc);
+    REQUIRE_NOTHROW(fill_context(user_options, context));
+    REQUIRE(context.disable_errors == true);
+  }
+
+  SECTION("jobs and max-review-comments should be passed into context") {
+    auto opts = make_opt("--target-revision=main", "--jobs=3", "--max-review-comments=12");
+    auto user_options = parse(opts.size(), opts.data(), desc);
+    REQUIRE_NOTHROW(fill_context(user_options, context));
+    REQUIRE(context.jobs == 3);
+    REQUIRE(context.max_review_comments == 12);
+  }
+
+  SECTION("jobs should reject zero") {
+    auto opts         = make_opt("--target-revision=main", "--jobs=0");
+    auto user_options = parse(opts.size(), opts.data(), desc);
+    REQUIRE_THROWS(fill_context(user_options, context));
+  }
+}
+
+TEST_CASE("Default clang tool version is pinned to the supported latest major",
+          "[cpp-lint-action][program_options][tool]") {
+  REQUIRE(tool::default_clang_tool_version == "22");
 }

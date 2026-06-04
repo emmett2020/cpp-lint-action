@@ -1,4 +1,5 @@
 FILE(GLOB_RECURSE test_files "${cpp_lint_action_root}/tests/*.cpp")
-add_executable(test ${test_files} $<TARGET_OBJECTS:dep_obj>)
-target_link_libraries(test PRIVATE Catch2::Catch2)
-
+add_executable(test ${test_files})
+add_dependencies(test cpp-lint-action)
+target_compile_definitions(test PRIVATE CPP_LINT_ACTION_BINARY=\"$<TARGET_FILE:cpp-lint-action>\")
+target_link_libraries(test PRIVATE dep_obj Catch2::Catch2)

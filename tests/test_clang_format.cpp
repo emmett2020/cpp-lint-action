@@ -103,7 +103,7 @@ namespace {
 
 TEST_CASE("Test register and create clang-format option",
           "[cpp-lint-action][program_options][tool][clang_format][creator]") {
-  SKIP_IF_NO_CLANG_FORMAT
+  SKIP_IF_NOT_HAS_CLANG_FORMAT_VERSION("22")
   auto creator = std::make_unique<clang_format::creator>();
   auto desc    = create_then_register_tool_desc(*creator);
 
@@ -126,7 +126,7 @@ TEST_CASE("Test register and create clang-format option",
   }
 
   SECTION("Receive an invalid clang-format version should throw exception") {
-    auto opts = parse_opt(desc, "--target-revision=main", "--clang-format-version=18.x.1");
+    auto opts = parse_opt(desc, "--target-revision=main", "--clang-format-version=22.x.1");
     REQUIRE_THROWS(creator->create_option(opts));
   }
 
@@ -153,11 +153,11 @@ TEST_CASE("Test register and create clang-format option",
 TEST_CASE("Test clang-format should get full version even though user input a "
           "simplified version",
           "[cpp-lint-action][tool][clang_format][creator]") {
-  SKIP_IF_NOT_HAS_CLANG_FORMAT_VERSION("18")
+  SKIP_IF_NOT_HAS_CLANG_FORMAT_VERSION("22")
   auto creator = std::make_unique<clang_format::creator>();
   auto desc    = create_then_register_tool_desc(*creator);
 
-  auto vars = parse_opt(desc, "--target-revision=main", "--clang-format-version=18");
+  auto vars = parse_opt(desc, "--target-revision=main", "--clang-format-version=22");
 
   auto context = runtime_context{};
   program_options::fill_context(vars, context);
@@ -165,7 +165,7 @@ TEST_CASE("Test clang-format should get full version even though user input a "
   auto version      = clang_format->version();
   auto parts        = ranges::views::split(version, '.') | ranges::to<std::vector<std::string>>();
   REQUIRE(parts.size() == 3);
-  REQUIRE(parts[0] == "18");
+  REQUIRE(parts[0] == "22");
   REQUIRE(ranges::all_of(parts[1], isdigit));
   REQUIRE(ranges::all_of(parts[2], isdigit));
 }
